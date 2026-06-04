@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}} - VietPhrase Reader</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #fafafa;
+            --container-bg: #ffffff;
+            --text-color: #1e293b;
+            --title-color: #0f172a;
+            --nav-bg: #ffffff;
+            --nav-border: #e2e8f0;
+            --accent: #2563eb;
+            --accent-glow: rgba(37, 99, 235, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 680px;
+            padding: 20px 15px 100px 15px;
+        }
+
+        /* Top control panel */
+        .top-nav {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            max-width: 680px;
+            background: var(--nav-bg);
+            border-bottom: 1px solid var(--nav-border);
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .nav-back {
+            color: var(--text-color);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: color 0.2s;
+        }
+
+        .nav-back:hover {
+            color: var(--accent);
+        }
+
+        /* Content elements */
+        .chapter-header {
+            margin: 24px 0 20px 0;
+            text-align: left;
+            border-bottom: 1px solid var(--nav-border);
+            padding-bottom: 16px;
+        }
+
+        .chapter-title {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: var(--title-color);
+            line-height: 1.4;
+        }
+
+        .book-link {
+            font-size: 0.9rem;
+            color: var(--accent);
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        /* Novel text body */
+        .novel-body {
+            font-size: 22px; /* Mặc định chữ lớn */
+            line-height: 1.8;
+            color: #1e293b;
+        }
+
+        .novel-body p {
+            margin-bottom: 1.8rem;
+            text-align: left;
+        }
+
+        /* Navigation buttons at bottom */
+        .nav-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--nav-border);
+        }
+
+        .nav-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #475569;
+            background: #ffffff;
+            border: 1px solid var(--nav-border);
+            font-weight: 600;
+            font-size: 0.88rem;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .nav-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .nav-btn.disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .progress-bar-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #e2e8f0;
+            z-index: 1000;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+    </style>
+</head>
+<body>
+    <!-- Progress Bar -->
+    <div class="progress-bar-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <!-- Header Sticky Nav -->
+    <nav class="top-nav">
+        <a href="/book/{{bookId}}" class="nav-back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            Mục lục
+        </a>
+        
+        <!-- Bộ chỉnh cỡ chữ nhanh hiển thị ngay trên thanh điều hướng -->
+        <div class="font-controls" style="display: flex; align-items: center; gap: 8px;">
+            <button onclick="adjustFontSize(-2)" style="width: 32px; height: 32px; font-size: 0.85rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #ffffff; cursor: pointer; font-weight: bold; color: #475569; display: flex; align-items: center; justify-content: center;">A-</button>
+            <span id="fontSizeDisplay" style="font-size: 0.85rem; font-weight: 600; min-width: 42px; text-align: center; color: #475569;">22px</span>
+            <button onclick="adjustFontSize(2)" style="width: 32px; height: 32px; font-size: 0.85rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #ffffff; cursor: pointer; font-weight: bold; color: #475569; display: flex; align-items: center; justify-content: center;">A+</button>
+        </div>
+    </nav>
+
+    <!-- Reading Container -->
+    <div class="container">
+        <div class="chapter-header">
+            <a href="/book/{{bookId}}" class="book-link">← {{bookTitle}}</a>
+            <h1 class="chapter-title">{{title}}</h1>
+        </div>
+
+        <div class="novel-body" id="novelBody">
+            {{content}}
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="nav-buttons">
+            <a href="{{prevUrl}}" class="nav-btn {{prevDisabled}}">Chương trước</a>
+            <a href="/book/{{bookId}}" class="nav-btn">Mục lục</a>
+            <a href="{{nextUrl}}" class="nav-btn {{nextDisabled}}">Chương sau</a>
+        </div>
+    </div>
+
+    <script>
+        // Cấu hình kích thước chữ
+        let currentFontSize = 22; // Mặc định chữ lớn hơn một chút
+        
+        // Khôi phục cài đặt từ localStorage
+        try {
+            const savedSize = localStorage.getItem('read_font_size');
+            if (savedSize) {
+                currentFontSize = parseInt(savedSize);
+            }
+            applyFontSize();
+            
+            // Lưu tiến trình đọc truyện hiện tại vào lịch sử
+            const currentBookId = '{{bookId}}';
+            const currentChapterUrl = window.location.pathname;
+            const currentChapterTitle = '{{title}}';
+            
+            const history = JSON.parse(localStorage.getItem('read_history') || '{}');
+            history[currentBookId] = {
+                url: currentChapterUrl,
+                title: currentChapterTitle,
+                time: Date.now()
+            };
+            localStorage.setItem('read_history', JSON.stringify(history));
+
+        } catch(e) {
+            console.error('Initial storage operations failed:', e);
+        }
+
+        function adjustFontSize(delta) {
+            currentFontSize = Math.max(14, Math.min(36, currentFontSize + delta));
+            applyFontSize();
+            try {
+                localStorage.setItem('read_font_size', currentFontSize);
+            } catch(e) {}
+        }
+
+        function applyFontSize() {
+            document.getElementById('novelBody').style.fontSize = currentFontSize + 'px';
+            document.getElementById('fontSizeDisplay').innerText = currentFontSize + 'px';
+        }
+
+        // Cập nhật thanh phần trạng tiến trình đọc
+        window.addEventListener('scroll', () => {
+            const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = height > 0 ? (winScroll / height) * 100 : 0;
+            document.getElementById('progressBar').style.width = scrolled + '%';
+        });
+    </script>
+</body>
+</html>

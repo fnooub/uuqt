@@ -1,33 +1,396 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VietPhrase App</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: #fafafa; 
+            padding: 20px 15px; 
+            color: #1e293b; 
+            max-width: 680px; 
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+        h1 { 
+            font-size: 1.4rem; 
+            margin-bottom: 20px; 
+            font-weight: 700;
+            color: #0f172a;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+        .layout { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 16px; 
+        }
+        .col label { display: block; font-size: 0.85rem; color: #475569; margin-bottom: 6px; font-weight: 600; }
+        textarea {
+            width: 100%; height: 200px; padding: 10px 12px;
+            border: 1px solid #cbd5e1; border-radius: 8px;
+            font-size: 0.95rem; resize: vertical; font-family: inherit;
+            line-height: 1.5;
+            background: #ffffff;
+            color: #1e293b;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        textarea:focus { border-color: #3b82f6; }
+        textarea[readonly] { background: #f8fafc; color: #334155; }
+        #names2Input { height: 120px; font-size: 0.88rem; color: #334155; font-family: monospace; }
+        #names2Input.error { border-color: #ef4444; }
+        .toolbar { margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        button {
+            padding: 8px 20px; border: 1px solid #cbd5e1; border-radius: 6px;
+            cursor: pointer; font-size: 0.9rem; font-weight: 600;
+            background: #ffffff; color: #334155;
+            transition: all 0.2s;
+        }
+        button:hover { background: #f1f5f9; border-color: #94a3b8; }
+        #btnTranslate { background: #2563eb; color: #fff; border-color: #2563eb; }
+        #btnTranslate:hover { background: #1d4ed8; }
+        #btnTranslate:disabled { background: #94a3b8; border-color: #94a3b8; cursor: not-allowed; }
+        #btnClear { background: #f1f5f9; color: #475569; }
+        #btnClear:hover { background: #e2e8f0; }
+        #status { font-size: 0.8rem; color: #64748b; font-weight: 500; }
+        #names2Error { font-size: 0.78rem; color: #ef4444; margin-top: 4px; min-height: 16px; }
+        .names2-count { font-size: 0.78rem; color: #64748b; margin-top: 4px; }
+        
+        .reader-section {
+            background: #ffffff; padding: 20px; border-radius: 8px;
+            margin-bottom: 20px; border: 1px solid #e2e8f0;
+        }
+        .reader-section h2 { font-size: 1.1rem; margin-bottom: 12px; color: #0f172a; font-weight: 700; }
+        .reader-input-group { display: flex; gap: 8px; flex-direction: column; }
+        @media (min-width: 480px) {
+            .reader-input-group { flex-direction: row; }
+        }
+        .reader-input-group input {
+            flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1;
+            border-radius: 8px; font-size: 0.95rem; outline: none;
+            transition: border-color 0.2s;
+        }
+        .reader-input-group input:focus { border-color: #2563eb; }
+        .btn-read { 
+            background: #10b981; color: white; border: none; border-radius: 8px; 
+            cursor: pointer; font-size: 0.95rem; font-weight: 600; padding: 10px 20px; 
+            transition: background 0.2s;
+        }
+        .btn-read:hover { background: #059669; }
+        
+        /* Book List CSS */
+        .book-list-section {
+            background: #ffffff; padding: 20px; border-radius: 8px;
+            margin-bottom: 20px; border: 1px solid #e2e8f0;
+        }
+        .book-list-section h2 { font-size: 1.15rem; margin-bottom: 16px; color: #0f172a; border-left: 4px solid #2563eb; padding-left: 10px; font-weight: 700; }
+        .book-grid {
+            display: flex; flex-direction: column; gap: 14px;
+            margin-bottom: 24px;
+        }
+        .book-card {
+            background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;
+            padding: 16px; display: flex; flex-direction: column; gap: 8px;
+            transition: border-color 0.2s;
+        }
+        .book-card:hover {
+            border-color: #cbd5e1;
+        }
+        .book-card-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            gap: 8px;
+        }
+        .book-card-title {
+            font-size: 1.05rem; font-weight: 600; color: #1e293b; text-decoration: none;
+            line-height: 1.4;
+        }
+        .book-card-title:hover { color: #2563eb; }
+        .book-card-author {
+            font-size: 0.85rem; color: #64748b; font-weight: 600;
+        }
+        .book-card-meta {
+            display: flex; gap: 12px; font-size: 0.78rem; color: #94a3b8;
+        }
+        .book-card-intro {
+            font-size: 0.88rem; color: #475569; line-height: 1.5;
+            display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+            overflow: hidden; text-overflow: ellipsis;
+        }
+        .book-card-latest {
+            font-size: 0.85rem; color: #0d9488; background: #f0fdfa;
+            border: 1px solid #ccfbf1; padding: 6px 10px; border-radius: 6px;
+            text-decoration: none; display: inline-block; margin-top: 4px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            font-weight: 500;
+        }
+        .book-card-latest:hover {
+            background: #e6fffa;
+        }
+        .category-tabs {
+            display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px;
+            padding-bottom: 12px; border-bottom: 1px solid #e2e8f0;
+        }
+        .category-tab {
+            background: #f8fafc; color: #64748b; padding: 5px 12px;
+            border-radius: 20px; text-decoration: none; font-size: 0.85rem;
+            font-weight: 600; border: 1px solid #cbd5e1;
+            transition: all 0.2s;
+        }
+        .category-tab:hover {
+            background: #f1f5f9; color: #1e293b;
+        }
+        .category-tab.active {
+            background: #2563eb; color: #fff; border-color: #2563eb;
+        }
+        .pagination {
+            display: flex; justify-content: center; align-items: center;
+            gap: 6px; flex-wrap: wrap; margin-top: 16px;
+        }
+        .pagination-btn {
+            background: #fff; border: 1px solid #cbd5e1; color: #475569;
+            padding: 6px 12px; font-size: 0.85rem; border-radius: 6px;
+            text-decoration: none; font-weight: 600; transition: all 0.2s;
+        }
+        .pagination-btn:hover {
+            border-color: #94a3b8; background: #f8fafc;
+        }
+        .pagination-btn.active {
+            background: #2563eb; border-color: #2563eb; color: #fff;
+        }
+        .pagination-btn.disabled {
+            opacity: 0.4; pointer-events: none;
+        }
+        .manual-tool-title {
+            font-size: 1.05rem; margin-top: 24px; margin-bottom: 12px; color: #475569;
+            display: flex; align-items: center; gap: 8px; cursor: pointer;
+            user-select: none; border-top: 1px solid #cbd5e1; padding-top: 16px;
+            font-weight: 700;
+        }
+    </style>
 </head>
 <body>
-    <h1>VietPhrase App</h1>
-    <form id="translationForm">
-        <label for="textInput">Nhập văn bản tiếng Trung:</label>
-        <textarea id="textInput" name="text" rows="20" style="width: 100%;" required></textarea>
-        <button type="button" onclick="translateText()">Dịch</button>
-    </form>
+<h1>VietPhrase — Dịch Hán Việt</h1>
 
-    <p id="translationResult"></p>
+<div class="reader-section">
+    <h2>Đọc truyện trực tiếp từ uukanshu.cc (Tự động dịch VietPhrase)</h2>
+    <div class="reader-input-group">
+        <input type="text" id="novelInput" placeholder="Nhập ID truyện (VD: 17474) hoặc dán link truyện từ uukanshu.cc...">
+        <button class="btn-read" onclick="goToNovel()">Đọc truyện</button>
+    </div>
+</div>
 
-    <script>
-        async function translateText() {
-            const inputText = document.getElementById('textInput').value;
-            const response = await fetch('/translate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ text: inputText }),
-            });
-            const data = await response.json();
-            document.getElementById('translationResult').innerText = data.translatedText;
+<!-- Book List Section -->
+<div class="book-list-section">
+    <h2>Truyện mới cập nhật (Thể loại: {{categoryName}})</h2>
+    <div class="category-tabs">
+        {{categoryTabs}}
+    </div>
+    <div class="book-grid">
+        {{novels}}
+    </div>
+    <div class="pagination">
+        {{pagination}}
+    </div>
+</div>
+
+<h3 class="manual-tool-title" onclick="toggleManualTool()">
+    <span id="manualArrow">▶</span> Công cụ dịch thủ công (Dán văn bản tiếng Trung)
+</h3>
+
+<div id="manualToolContent" style="display: none;">
+    <div class="layout">
+        <!-- Cột 1: Names2 -->
+        <div class="col">
+            <label for="names2Input">Names2.txt (tùy chọn)</label>
+            <textarea id="names2Input" spellcheck="false"
+                placeholder="Tên riêng theo truyện&#10;Mỗi dòng: key=value&#10;&#10;Ví dụ:&#10;云飞=Vân Phi&#10;青云宗=Thanh Vân Tông&#10;噬魂剑=Phệ Hồn Kiếm"></textarea>
+            <div id="names2Error"></div>
+            <div class="names2-count" id="names2Count"></div>
+        </div>
+
+        <!-- Cột 2: Input -->
+        <div class="col">
+            <label for="inputText">Văn bản tiếng Trung</label>
+            <textarea id="inputText" placeholder="Nhập hoặc dán văn bản tiếng Trung..."></textarea>
+        </div>
+
+        <!-- Cột 3: Output -->
+        <div class="col">
+            <label>Kết quả dịch</label>
+            <textarea id="outputText" readonly placeholder="Kết quả hiển thị ở đây..."></textarea>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <button id="btnTranslate" onclick="doTranslate()">Dịch</button>
+        <button id="btnClear" onclick="clearAll()">Xóa</button>
+        <span id="status"></span>
+    </div>
+</div>
+
+<script>
+// Parse Names2 textarea → object { key: value }
+// Bỏ qua dòng trống và dòng comment (#)
+// Trả về { map, errors }
+function parseNames2(raw) {
+    const map = {};
+    const errors = [];
+
+    const lines = raw.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        const trimmed = lines[i].trim();
+
+        // Bỏ qua dòng trống hoặc comment
+        if (!trimmed || trimmed.startsWith('#')) continue;
+
+        const eqIdx = trimmed.indexOf('=');
+        if (eqIdx <= 0) {
+            errors.push(`Dòng ${i + 1}: thiếu dấu "=" — "${trimmed}"`);
+            continue;
         }
-    </script>
+
+        const key   = trimmed.slice(0, eqIdx).trim();
+        const value = trimmed.slice(eqIdx + 1).trim();
+
+        if (!key)   { errors.push(`Dòng ${i + 1}: key rỗng`); continue; }
+        if (!value) { errors.push(`Dòng ${i + 1}: value rỗng — "${key}"`); continue; }
+
+        map[key] = value;
+    }
+
+    return { map, errors };
+}
+
+const names2El = document.getElementById('names2Input');
+const errorEl  = document.getElementById('names2Error');
+const countEl  = document.getElementById('names2Count');
+const inputEl  = document.getElementById('inputText');
+const outputEl = document.getElementById('outputText');
+const statusEl = document.getElementById('status');
+const btnEl    = document.getElementById('btnTranslate');
+
+// Validate Names2 realtime khi user gõ
+names2El.addEventListener('input', () => {
+    const raw = names2El.value.trim();
+    if (!raw) {
+        errorEl.textContent = '';
+        countEl.textContent = '';
+        names2El.classList.remove('error');
+        return;
+    }
+    const { map, errors } = parseNames2(raw);
+    const count = Object.keys(map).length;
+    if (errors.length > 0) {
+        names2El.classList.add('error');
+        errorEl.textContent = errors[0] + (errors.length > 1 ? ` (+${errors.length - 1} lỗi khác)` : '');
+    } else {
+        names2El.classList.remove('error');
+        errorEl.textContent = '';
+    }
+    countEl.textContent = count > 0 ? `${count} entry` : '';
+});
+
+async function doTranslate() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    // Parse Names2 trước khi gửi
+    const raw = names2El.value.trim();
+    let names2 = null;
+    if (raw) {
+        const { map, errors } = parseNames2(raw);
+        if (errors.length > 0) {
+            statusEl.textContent = '⚠ Names2 có lỗi, hãy sửa trước khi dịch';
+            names2El.focus();
+            return;
+        }
+        if (Object.keys(map).length > 0) names2 = map;
+    }
+
+    btnEl.disabled = true;
+    statusEl.textContent = 'Đang dịch...';
+    outputEl.value = '';
+
+    try {
+        const t0 = Date.now();
+        const body = { text };
+        if (names2) body.names2 = names2;
+
+        const res = await fetch('/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            statusEl.textContent = '⚠ ' + (data.error || 'Lỗi server');
+            return;
+        }
+
+        outputEl.value = data.translatedText;
+        const n2info = names2 ? ` · names2: ${Object.keys(names2).length} entry` : '';
+        statusEl.textContent = `Xong trong ${Date.now() - t0}ms${n2info}`;
+
+    } catch (e) {
+        statusEl.textContent = '⚠ Không kết nối được server';
+    } finally {
+        btnEl.disabled = false;
+    }
+}
+
+function clearAll() {
+    inputEl.value = '';
+    outputEl.value = '';
+    names2El.value = '';
+    errorEl.textContent = '';
+    countEl.textContent = '';
+    names2El.classList.remove('error');
+    statusEl.textContent = '';
+}
+
+// Ctrl+Enter để dịch nhanh
+inputEl.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key === 'Enter') doTranslate();
+});
+
+function goToNovel() {
+    const input = document.getElementById('novelInput').value.trim();
+    if (!input) return;
+    
+    let bookId = '';
+    const match = input.match(/\/book\/(\d+)/i);
+    if (match) {
+        bookId = match[1];
+    } else if (/^\d+$/.test(input)) {
+        bookId = input;
+    } else {
+        alert('Vui lòng nhập ID truyện hợp lệ hoặc link uukanshu.cc!');
+        return;
+    }
+    
+    window.location.href = `/book/${bookId}`;
+}
+
+document.getElementById('novelInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') goToNovel();
+});
+
+function toggleManualTool() {
+    const content = document.getElementById('manualToolContent');
+    const arrow = document.getElementById('manualArrow');
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        arrow.innerText = '▼';
+    } else {
+        content.style.display = 'none';
+        arrow.innerText = '▶';
+    }
+}
+</script>
 </body>
 </html>
