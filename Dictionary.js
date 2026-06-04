@@ -1,226 +1,263 @@
-const fs = require('fs').promises;
+'use strict';
 
-// Định nghĩa một nút trong cây Trie
+const fs = require('fs');
+const path = require('path');
+const { sify } = require('chinese-conv');
+
+// --- Trie ---
+
 class TrieNode {
     constructor() {
-        this.children = new Map();  // Danh sách con của nút (Map để lưu trữ key-value)
-        this.isEndOfWord = false;   // Đánh dấu xem đây có phải là nút lá của một từ không
-        this.translation = null;    // Dịch của từ nếu đây là nút lá
+        this.children = new Map();
+        this.translation = null; // null = không phải end-of-word
     }
 }
 
-// Lớp Dictionary quản lý các từ điển và thực hiện chức năng dịch
+class Trie {
+    constructor() {
+        this.root = new TrieNode();
+    }
+
+    insert(key, value) {
+        if (!key || !value) return;
+        let node = this.root;
+        for (const char of key) {
+            let child = node.children.get(char);
+            if (!child) {
+                child = new TrieNode();
+                node.children.set(char, child);
+            }
+            node = child;
+        }
+        // Chỉ lưu translation đầu tiên (Names.txt load trước, ưu tiên hơn VietPhrase)
+        if (node.translation === null) {
+            node.translation = value;
+        }
+    }
+
+    // Trả về { word, translation } của match dài nhất tại vị trí `start`
+    // Nếu không có match → trả về null
+    longestMatch(text, start) {
+        let node = this.root;
+        let lastMatch = null;
+
+        for (let i = start; i < text.length; i++) {
+            const child = node.children.get(text[i]);
+            if (!child) break;
+            node = child;
+            if (node.translation !== null) {
+                lastMatch = { end: i, translation: node.translation };
+            }
+        }
+
+        return lastMatch;
+    }
+}
+
+// --- Punctuation map (build 1 lần) ---
+
+const PUNCT_MAP = {
+    '。': '. ', '，': ', ', '、': ', ', '；': '; ', '！': '! ', '？': '? ',
+    '：': ': ', '（': '(', '）': ')', '〔': '[', '〕': ']',
+    '【': '[', '】': ']', '《': '"', '》': '"',
+    '｛': '{', '｝': '}', '『': '[', '』': ']',
+    '〈': '<', '〉': '>', '～': '~', '—': ' - ', '…': '...',
+    '〖': '[', '〗': ']', '〘': '[', '〙': ']', '〚': '[', '〛': ']',
+    '　': ' ', '\u201c': '"', '\u201d': '"', '\u2018': "'", '\u2019': "'"
+};
+
+const PUNCT_REGEX = new RegExp(`[${Object.keys(PUNCT_MAP).join('')}]`, 'g');
+
+// --- PostProcess regex (build 1 lần, không re-compile mỗi call) ---
+const RE_SPACE_BEFORE_PUNCT = / +([,.?![\]>"':;])/g;
+const RE_SPACE_AFTER_OPEN   = /([<\["'(]) +/g;
+const RE_MULTI_SPACE        = / {2,}/g;
+const RE_CAPITALIZE         = /(^|[.!?]\s+)([a-z])/g;
+
+// --- Dictionary ---
+
 class Dictionary {
     constructor() {
-        this.root = new TrieNode();         // Nút gốc của cây Trie
-        this.phienAmDictionary = new Map(); // Từ điển cho phụ âm
-        this.cachedData = new Map();        // Cache dữ liệu từ tệp để tránh đọc lại nếu đã đọc rồi
+        this.trie = new Trie();
+        this.phienAmMap = new Map(); // char đơn → phiên âm
+        this.ready = false;
     }
 
-    // Phương thức đọc dữ liệu từ điển từ một tệp trực tuyến
-    async readDictionaryFile(fileName, processLine) {
-        try {
-            if (this.cachedData.has(fileName)) {
-                const cachedContent = this.cachedData.get(fileName);
-                this.processLines(cachedContent, processLine);
-            } else {
-                const fileContent = await fs.readFile(fileName, 'utf8'); // Đọc nội dung tệp
-                this.cachedData.set(fileName, fileContent);     // Lưu vào cache để sử dụng lại sau này
-                this.processLines(fileContent, processLine);    // Xử lý từng dòng dữ liệu
-            }
-        } catch (error) {
-            console.error('Lỗi đọc file từ điển:', error);
-        }
-    }
-
-    // Phương thức xử lý từng dòng dữ liệu từ điển
-    processLines(content, processLine) {
+    /**
+     * Parse nội dung file Names2.txt (format key=value mỗi dòng)
+     * → trả về plain object { [key]: value } dùng được làm names2 trong translate()
+     *
+     * Ví dụ input:
+     *   云飞=Vân Phi
+     *   青云宗=Thanh Vân Tông
+     *
+     * @param {string} content - Nội dung file dạng string
+     * @returns {{ [key: string]: string }}
+     */
+    static parseNames2(content) {
+        const result = {};
         const lines = content.split('\n');
         for (const line of lines) {
-            const [key, value] = line.split('=').map(item => item.trim());
-            processLine(key, value);
+            const eqIdx = line.indexOf('=');
+            if (eqIdx <= 0) continue;
+
+            const key = line.slice(0, eqIdx).trim();
+            const value = line.slice(eqIdx + 1).trim();
+
+            if (!key || !value) continue;
+            result[key] = value; // key xuất hiện nhiều lần → giữ cái đầu tiên
+        }
+        return result;
+    }
+
+    // Parse file text → gọi callback(key, value) cho mỗi dòng hợp lệ
+    _parseFile(content, callback) {
+        const lines = content.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const eqIdx = line.indexOf('=');
+            if (eqIdx <= 0) continue; // bỏ dòng không có '=' hoặc key rỗng
+
+            const key = line.slice(0, eqIdx).trim();
+            const value = line.slice(eqIdx + 1).trim();
+
+            if (!key || !value) continue;
+            callback(key, value);
         }
     }
 
-    // Phương thức tải toàn bộ từ điển từ các nguồn khác nhau
-    async loadDictionaries() {
-        // Tải từ điển tên
-        const loadNames = this.readDictionaryFile('Names.txt', (key, value) => {
-            this.insert(key, value);
-        });
-
-        // Tải từ điển Việt-Trung
-        const loadVietPhrase = this.readDictionaryFile('VietPhrase.txt', (key, value) => {
-            this.insert(key, value);
-        });
-
-        // Tải từ điển phụ âm tiếng Trung
-        const loadChinesePhienAm = this.readDictionaryFile('ChinesePhienAmWords.txt', (key, value) => {
-            this.phienAmDictionary.set(key, value);
-        });
-
-        // Đợi cho đến khi tất cả các từ điển đã được tải xong
-        await Promise.all([loadNames, loadVietPhrase, loadChinesePhienAm]);
+    _loadFile(filePath) {
+        // Dùng sync vì chỉ gọi 1 lần lúc startup, đơn giản và nhanh hơn async ở đây
+        return fs.readFileSync(filePath, 'utf8');
     }
 
-    // Phương thức thêm một từ vào cây Trie
-    insert(key, value) {
-        let node = this.root;
-        for (const char of key) {
-            node.children.set(char, node.children.get(char) || new TrieNode());
-            node = node.children.get(char);
-        }
-        node.isEndOfWord = true;
-        node.translation = value;
+    init(dataDir = __dirname) {
+        console.time('dictionary_load');
+
+        // Load Names trước (ưu tiên cao hơn VietPhrase khi trùng key)
+        const namesContent = this._loadFile(path.join(dataDir, 'Names.txt'));
+        this._parseFile(namesContent, (key, value) => {
+            this.trie.insert(key, value);
+        });
+
+        const vpContent = this._loadFile(path.join(dataDir, 'VietPhrase.txt'));
+        this._parseFile(vpContent, (key, value) => {
+            this.trie.insert(key, value);
+        });
+
+        const phienAmContent = this._loadFile(path.join(dataDir, 'ChinesePhienAmWords.txt'));
+        this._parseFile(phienAmContent, (key, value) => {
+            this.phienAmMap.set(key, value);
+        });
+
+        this.ready = true;
+        console.timeEnd('dictionary_load');
+        console.log(`PhienAm entries: ${this.phienAmMap.size}`);
     }
 
-    // Phương thức tìm kiếm một từ trong cây Trie
-    search(key) {
-        let node = this.root;
-        for (const char of key) {
-            node = node.children.get(char);
-            if (!node) return null;
-        }
-        return node.isEndOfWord ? node.translation : null;
-    }
+    // Các particle tiếng Trung cần bỏ qua
+    static SKIP_WORDS = new Set(['的', '了', '著', '着']);
 
     /**
-     * Phương thức dịch một đoạn văn bản từ tiếng Trung sang tiếng Việt.
-     * @param {string} text - Đoạn văn bản cần dịch.
-     * @returns {string} - Kết quả dịch.
+     * Dịch văn bản tiếng Trung sang Việt.
+     * @param {string} text - Văn bản cần dịch
+     * @param {Object} names2 - Từ điển tên riêng per-request, ưu tiên cao nhất
+     *                          Ví dụ: { "云飞": "Vân Phi", "青云宗": "Thanh Vân Tông" }
      */
-    translate(text) {
-        // Bước 1: Chuyển đổi dấu câu Trung Quốc sang chữ La-tinh
-        const convertPunctuation = this.convertPunctuation(text);
+    translate(text, names2 = null) {
+        if (!text) return '';
 
-        // Bước 2: Phân tách văn bản thành các từ và lọc bỏ từ không cần thiết
-        const splitText = this.tokenize(convertPunctuation)
-            .filter(word => word !== '的' && word !== '了' && word !== '著');
+        // Tự động chuyển đổi văn bản phồn thể sang giản thể
+        const simplified = sify(text);
 
-        // Bước 3: Dịch từng từ và lọc bỏ một số từ không cần thiết
-        const translations = splitText.map(word => {
-            const searchResult = this.search(word);
-            return searchResult ? searchResult.split('/')[0] : word;
-        })
-        .map(word => this.phienAmDictionary.get(word) || word);
+        // Bước 1: Chuẩn hóa dấu câu
+        const normalized = simplified.replace(PUNCT_REGEX, ch => PUNCT_MAP[ch]);
 
-        // Bước 4: Xử lý văn bản và trả về kết quả dịch
-        return this.processText(translations.join(' '));
-    }
+        // Bước 2: Tokenize bằng Trie chính (không bao giờ thay đổi)
+        // names2 chỉ ảnh hưởng bước lookup, KHÔNG ảnh hưởng tokenize
+        const tokens = this._tokenize(normalized);
 
-    /**
-     * Tách văn bản thành các từ sử dụng một trie.
-     * @param {string} text - Văn bản cần tách.
-     * @returns {string[]} - Mảng chứa các từ đã tách.
-     */
-    tokenize(text) {
-      const output = [];         // Mảng chứa kết quả sau khi tách
-      let currentIndex = 0;      // Vị trí hiện tại trong văn bản
-
-      while (currentIndex < text.length) {
-        let currentNode = this.root;  // Bắt đầu từ nút gốc của trie
-        let lastFoundIndex = -1;      // Vị trí cuối cùng của từ đã tìm thấy
-
-        // Duyệt qua văn bản từ vị trí hiện tại
-        for (let i = currentIndex; i < text.length; i++) {
-          const char = text[i];
-
-          // Kiểm tra xem ký tự có trong trie không
-          if (currentNode.children.has(char)) {
-            currentNode = currentNode.children.get(char);
-
-            // Nếu đến cuối của một từ trong trie, lưu lại vị trí
-            if (currentNode.isEndOfWord) {
-              lastFoundIndex = i;
+        // Tự động chuyển đổi toàn bộ khóa (key) của names2 sang giản thể để đối khớp chính xác
+        let names2Map = null;
+        if (names2 && typeof names2 === 'object') {
+            names2Map = new Map();
+            for (const [key, val] of Object.entries(names2)) {
+                names2Map.set(sify(key), val);
             }
-          } else {
-            break;
-          }
         }
 
-        // Nếu tìm thấy từ trong trie
-        if (lastFoundIndex !== -1) {
-          // Thêm từ đã tìm thấy vào mảng kết quả
-          output.push(text.slice(currentIndex, lastFoundIndex + 1));
+        // Bước 3: Lookup chain — Names2 > Trie(Names+VietPhrase) > PhienAm
+        const parts = [];
+        for (const token of tokens) {
+            if (Dictionary.SKIP_WORDS.has(token)) continue;
 
-          // Cập nhật vị trí hiện tại
-          currentIndex = lastFoundIndex + 1;
-        } else {
-          // Nếu là ký tự Trung Quốc
-          if (this.isChineseCharacter(text[currentIndex])) {
-            output.push(text[currentIndex]);
-            currentIndex++;
-          } else {
-            // Nếu không phải ký tự Trung Quốc và không có từ trong trie, ghép từ vào một biến tạm thời
-            let nonChineseWord = text[currentIndex];
-
-            // Lặp để ghép những từ liên tiếp không phải ký tự Trung Quốc
-            while (currentIndex + 1 < text.length && !this.isChineseCharacter(text[currentIndex + 1])) {
-              currentIndex++;
-              nonChineseWord += text[currentIndex];
+            // Ưu tiên 1: Names2 per-request (O(1))
+            if (names2Map) {
+                const override = names2Map.get(token);
+                if (override) { parts.push(override); continue; }
             }
 
-            // Thêm chuỗi từ không phải ký tự Trung Quốc vào kết quả
-            output.push(nonChineseWord);
+            // Ưu tiên 2: Trie chính (Names + VietPhrase)
+            const match = this.trie.longestMatch(token, 0);
+            let word;
+            if (match && match.end === token.length - 1) {
+                word = match.translation.split('/')[0];
+            } else {
+                word = token;
+            }
 
-            // Cập nhật vị trí hiện tại
-            currentIndex++;
-          }
+            // Ưu tiên 3: PhienAm fallback cho ký tự đơn chưa có trong Trie
+            if (word === token && token.length === 1) {
+                word = this.phienAmMap.get(token) || token;
+            }
+
+            parts.push(word);
         }
-      }
 
-      return output;
+        // Bước 4: Hậu xử lý
+        return this._postProcess(parts.join(' '));
     }
 
-    // Phương thức kiểm tra xem một ký tự có phải là ký tự Trung Quốc hay không
-    isChineseCharacter(char) {
-        const charCode = char.charCodeAt(0);
-        return charCode >= 0x4E00 && charCode <= 0x9FFF;
+    _isChineseChar(ch) {
+        const code = ch.charCodeAt(0);
+        return (code >= 0x4E00 && code <= 0x9FFF)   // CJK cơ bản
+            || (code >= 0x3400 && code <= 0x4DBF)   // Extension A
+            || (code >= 0xF900 && code <= 0xFAFF);  // CJK Compatibility
     }
 
-    // Phương thức chuyển đổi dấu câu Trung Quốc sang chữ La-tinh
-    convertPunctuation(text) {
-        const mapping = {
-            '。': '. ', '，': ', ', '、': ', ', '；': ';', '！': '!', '？': '?',
-            '：': ': ', '（': '(', '）': ')', '〔': '[', '〕': ']', '【': '[',
-            '】': ']', '《': '<', '》': '>', '｛': '{', '｝': '}', '『': '[',
-            '』': ']', '〈': '<', '〉': '>', '～': '~', '—': '-', '…': '...',
-            '〖': '[', '〗': ']', '〘': '[', '〙': ']', '〚': '[', '〛': ']', '　': ' '
-        };
+    _tokenize(text) {
+        const output = [];
+        let i = 0;
 
-        // Chuyển đổi từng ký tự trong văn bản dựa trên bảng ánh xạ
-        return text.split('').map(char => mapping[char] || char).join('');
+        while (i < text.length) {
+            const match = this.trie.longestMatch(text, i);
+
+            if (match) {
+                output.push(text.slice(i, match.end + 1));
+                i = match.end + 1;
+            } else if (this._isChineseChar(text[i])) {
+                // Ký tự Hán đơn không có trong Trie
+                output.push(text[i]);
+                i++;
+            } else {
+                // Chuỗi non-Chinese: gom lại
+                let j = i + 1;
+                while (j < text.length && !this._isChineseChar(text[j])) j++;
+                output.push(text.slice(i, j));
+                i = j;
+            }
+        }
+
+        return output;
     }
 
-    // Phương thức xử lý văn bản (loại bỏ khoảng trắng thừa, chuyển đổi chữ in hoa, v.v.)
-    processText(input) {
-        // Các biểu thức chính quy để xử lý văn bản
-        const trimSpacesBefore = / +([,.?!\]\>”’):])/g;
-        const trimSpacesAfter = /([<\[“‘(]) +/g;
-        const capitalizeRegex = /(^\s*|[.!?“‘”’\[-]\s*)(\p{Ll})/gu;
-        const trimMultipleSpaces = / +/g;
-
-        // Tách văn bản thành các dòng và loại bỏ khoảng trắng thừa
-        const lines = input.split('\n');
-        const processedLines = lines.map(line => line.trim());
-
-        // Loại bỏ khoảng trắng thừa trước và sau dấu câu, chuyển đổi chữ in hoa
-        const trimmedStr1 = processedLines.join('\n').replace(trimSpacesBefore, '$1');
-        const trimmedStr2 = trimmedStr1.replace(trimSpacesAfter, '$1');
-
-        // Chuyển đổi chữ in hoa ở đầu mỗi câu
-        const processedText = trimmedStr2.replace(capitalizeRegex, (_, p1, p2) => p1 + p2.toUpperCase());
-
-        // Loại bỏ các dấu câu đặc biệt và thay thế nhiều khoảng trắng bằng một khoảng trắng
-        const finalResult = processedText.replace(/[“‘”’]/g, '"').replace(trimMultipleSpaces, ' ');
-
-        // Trả về văn bản đã xử lý
-        return finalResult;
-    }
-
-    // Hàm tự gọi khởi tạo đối tượng Dictionary và thực hiện dịch văn bản
-    async init() {
-        await this.loadDictionaries();
+    _postProcess(text) {
+        return text
+            .replace(RE_SPACE_BEFORE_PUNCT, '$1')
+            .replace(RE_SPACE_AFTER_OPEN,   '$1')
+            .replace(RE_MULTI_SPACE, ' ')
+            .replace(RE_CAPITALIZE, (_, p1, p2) => p1 + p2.toUpperCase())
+            .trim();
     }
 }
 
