@@ -340,6 +340,18 @@
                     <input type="text" id="cometEndpoint" value="https://api.cometapi.com/v1/chat/completions" placeholder="https://api.cometapi.com/v1/chat/completions" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem; width: 100%; box-sizing: border-box;">
                 </div>
 
+                <!-- Custom System Prompt -->
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label for="customSystemPrompt" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Custom System Prompt (được điền sẵn mẫu mặc định để sửa):</label>
+                    <textarea id="customSystemPrompt" placeholder="Nhập prompt chỉ dẫn cho AI trích xuất tên riêng..." style="width: 100%; height: 160px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; outline: none; background: #fff; color: #1e293b; resize: vertical; box-sizing: border-box;">Bạn là một chuyên gia phân tích ngôn ngữ Trung - Việt chuyên trích xuất tên riêng cho truyện.
+Nhiệm vụ của bạn là:
+1. Đọc kỹ văn bản tiếng Trung được cung cấp.
+2. Trích xuất tất cả các tên riêng có trong văn bản bao gồm: Tên nhân vật (người, thần thú, yêu quái...), Tên địa danh (tông môn, thành trì, núi sông...), Tên chiêu thức (kỹ năng, công pháp...), Tên vũ khí/vật phẩm đặc thù.
+3. Dịch các tên riêng đó sang âm Hán Việt chuẩn xác nhất.
+4. CHỈ trả về kết quả theo định dạng 'Từ_tiếng_Trung=Nghĩa_Hán_Việt' (ví dụ: '云飞=Vân Phi'), mỗi dòng một tên.
+5. KHÔNG giải thích, KHÔNG thêm tiêu đề, KHÔNG thêm số thứ tự hay bất kỳ ký tự thừa nào khác.</textarea>
+                </div>
+
                 <!-- Range Control -->
                 <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -701,6 +713,10 @@
                 document.getElementById('cometApiKey').value = localStorage.getItem('comet_api_key') || '';
                 document.getElementById('cometModel').value = localStorage.getItem('comet_model') || 'gemini-2.5-flash-lite';
                 document.getElementById('cometEndpoint').value = localStorage.getItem('comet_endpoint') || 'https://api.cometapi.com/v1/chat/completions';
+                const savedPrompt = localStorage.getItem('custom_system_prompt');
+                if (savedPrompt !== null) {
+                    document.getElementById('customSystemPrompt').value = savedPrompt;
+                }
                 
                 onApiTypeChange();
             } else {
@@ -736,11 +752,14 @@
                 return;
             }
 
+            const customSystemPrompt = document.getElementById('customSystemPrompt').value.trim();
+
             // Save credentials
             localStorage.setItem('ai_api_type', apiType);
             localStorage.setItem('comet_api_key', apiKey);
             localStorage.setItem('comet_model', model);
             localStorage.setItem('comet_endpoint', endpointUrl);
+            localStorage.setItem('custom_system_prompt', customSystemPrompt);
 
             // UI states
             const scanBtn = document.getElementById('aiScanBtn');
@@ -799,7 +818,8 @@
                         apiKey,
                         model,
                         apiType,
-                        endpointUrl
+                        endpointUrl,
+                        customSystemPrompt
                     }),
                     signal
                 });
