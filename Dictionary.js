@@ -18,7 +18,7 @@ class Trie {
         this.root = new TrieNode();
     }
 
-    insert(key, value) {
+    insert(key, value, overwrite = false) {
         if (!key || !value) return;
         let node = this.root;
         for (const char of key) {
@@ -29,8 +29,8 @@ class Trie {
             }
             node = child;
         }
-        // Chỉ lưu translation đầu tiên (Names.txt load trước, ưu tiên hơn VietPhrase)
-        if (node.translation === null) {
+        // Cho phép ghi đè nếu overwrite = true hoặc chưa có bản dịch
+        if (overwrite || node.translation === null) {
             node.translation = value;
         }
     }
@@ -140,7 +140,10 @@ class Dictionary {
             try {
                 const content = fs.readFileSync(names2Path, 'utf8');
                 this._parseFile(content, (key, value) => {
-                    this.names2Map.set(sify(key), value);
+                    const simplifiedKey = sify(key);
+                    this.names2Map.set(simplifiedKey, value);
+                    // Chèn vào Trie chính và ghi đè dịch nghĩa cũ để phân tách từ chính xác
+                    this.trie.insert(simplifiedKey, value, true);
                 });
                 console.log(`[Dictionary] Đã tải từ điển Names2.txt toàn cục với ${this.names2Map.size} mục từ.`);
             } catch (err) {
@@ -197,18 +200,20 @@ class Dictionary {
         // Bước 1: Chuẩn hóa dấu câu
         const normalized = simplified.replace(PUNCT_REGEX, ch => PUNCT_MAP[ch]);
 
-        // Bước 2: Tokenize bằng Trie chính (không bao giờ thay đổi)
-        // names2 chỉ ảnh hưởng bước lookup, KHÔNG ảnh hưởng tokenize
-        const tokens = this._tokenize(normalized);
-
         // Tự động chuyển đổi toàn bộ khóa (key) của names2 sang giản thể để đối khớp chính xác
         let names2Map = null;
         if (names2 && typeof names2 === 'object') {
             names2Map = new Map();
             for (const [key, val] of Object.entries(names2)) {
-                names2Map.set(sify(key), val);
+                const simplifiedKey = sify(key);
+                names2Map.set(simplifiedKey, val);
+                // Chèn vào Trie chính và ghi đè để phân tách từ chính xác cho request này
+                this.trie.insert(simplifiedKey, val, true);
             }
         }
+
+        // Bước 2: Tokenize bằng Trie chính
+        const tokens = this._tokenize(normalized);
 
         // Bước 3: Lookup chain — Names2 > Trie(Names+VietPhrase) > PhienAm
         const parts = [];
