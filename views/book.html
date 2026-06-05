@@ -254,6 +254,10 @@
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         Tải truyện (TXT)
                     </button>
+                    <button onclick="toggleAiPanel()" class="download-btn" style="margin-left: 4px; border: none; outline: none; cursor: pointer; background: #6366f1; border-color: #6366f1;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                        Quét tên riêng (AI)
+                    </button>
                 </div>
             </header>
         </div>
@@ -302,6 +306,90 @@
                     </div>
                     <div style="width: 100%; height: 10px; background: #f1f5f9; border-radius: 5px; overflow: hidden; border: 1px solid #e2e8f0;">
                         <div id="downloadProgressBar" style="width: 0%; height: 100%; background: #10b981; border-radius: 5px; transition: width 0.15s ease-out;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Names Scanner Panel -->
+        <div class="glass-card" id="aiPanel" style="display: none; transition: all 0.3s ease; border-color: #6366f1;">
+            <h2 class="intro-title" style="border-left: 4px solid #6366f1; padding-left: 10px; margin-bottom: 16px;">Tự động quét tên riêng bằng AI (CometAPI)</h2>
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <!-- API Credentials -->
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <div style="display: flex; flex-direction: column; gap: 4px; width: 180px;">
+                        <label for="aiApiType" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Loại API:</label>
+                        <select id="aiApiType" onchange="onApiTypeChange()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem; background: #fff; color: #1e293b;">
+                            <option value="openai">CometAPI / OpenAI / Khác</option>
+                            <option value="gemini">Gemini Direct API</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 200px;">
+                        <label id="apiKeyLabel" for="cometApiKey" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">API Key:</label>
+                        <input type="password" id="cometApiKey" placeholder="Nhập API Key của bạn..." style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px; width: 180px;">
+                        <label for="cometModel" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Model ID:</label>
+                        <input type="text" id="cometModel" value="gemini-2.5-flash-lite" placeholder="gemini-2.5-flash-lite" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem;">
+                    </div>
+                </div>
+
+                <!-- Custom Endpoint URL -->
+                <div id="endpointUrlContainer" style="display: flex; flex-direction: column; gap: 4px;">
+                    <label for="cometEndpoint" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Endpoint URL (chỉ cho OpenAI / Khác):</label>
+                    <input type="text" id="cometEndpoint" value="https://api.cometapi.com/v1/chat/completions" placeholder="https://api.cometapi.com/v1/chat/completions" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem; width: 100%; box-sizing: border-box;">
+                </div>
+
+                <!-- Range Control -->
+                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label for="aiStartChapter" style="font-size: 0.9rem; color: var(--text-muted);">Từ chương:</label>
+                        <input type="number" id="aiStartChapter" value="1" min="1" style="width: 80px; padding: 8px 12px; border-radius: 6px; background: #ffffff; border: 1px solid #cbd5e1; color: var(--text-main); text-align: center; outline: none; font-weight: 600;">
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label for="aiEndChapter" style="font-size: 0.9rem; color: var(--text-muted);">Đến chương:</label>
+                        <input type="number" id="aiEndChapter" value="10" min="1" style="width: 80px; padding: 8px 12px; border-radius: 6px; background: #ffffff; border: 1px solid #cbd5e1; color: var(--text-main); text-align: center; outline: none; font-weight: 600;">
+                    </div>
+                    
+                    <span style="font-size: 0.85rem; color: var(--text-muted);">(Quét tối đa 30 chương)</span>
+                </div>
+                
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 5px;">
+                    <button onclick="startAiScan()" id="aiScanBtn" class="download-btn" style="padding: 8px 16px; font-size: 0.85rem; background: #6366f1; border: none; cursor: pointer;">
+                        Bắt đầu quét bằng AI
+                    </button>
+                    <button onclick="cancelAiScan()" id="aiCancelBtn" class="download-btn" style="padding: 8px 16px; font-size: 0.85rem; background: #ef4444; border: none; display: none; cursor: pointer;">
+                        Hủy quét
+                    </button>
+                </div>
+
+                <!-- Scanning Progress -->
+                <div id="aiProgressContainer" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; align-items: center;">
+                        <span id="aiStatusText" style="color: var(--text-main); font-weight: 600;">Đang kết nối server...</span>
+                        <span id="aiPercentText" style="font-weight: 700; color: #6366f1;">Chờ xử lý</span>
+                    </div>
+                    <div style="width: 100%; height: 10px; background: #f1f5f9; border-radius: 5px; overflow: hidden; border: 1px solid #e2e8f0;">
+                        <div id="aiProgressBar" style="width: 0%; height: 100%; background: #6366f1; border-radius: 5px; transition: width 0.3s ease-out;"></div>
+                    </div>
+                </div>
+
+                <!-- Results Output -->
+                <div id="aiResultContainer" style="display: none; flex-direction: column; gap: 8px; margin-top: 10px;">
+                    <label for="aiResultTextarea" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Kết quả tên riêng tìm thấy (Key=Value):</label>
+                    <textarea id="aiResultTextarea" spellcheck="false" style="width: 100%; height: 180px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: monospace; font-size: 0.88rem; resize: vertical; outline: none; background: #fff; color: #1e293b;" placeholder="Kết quả sẽ hiển thị ở đây..."></textarea>
+                    
+                    <div style="display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap;">
+                        <button id="aiSaveBtn" onclick="saveAiResultsToServer()" class="download-btn" style="padding: 6px 12px; font-size: 0.8rem; background: #6366f1; border: none; cursor: pointer;">
+                            Lưu vào Names2 hệ thống
+                        </button>
+                        <button id="aiCopyBtn" onclick="copyAiResults()" class="download-btn" style="padding: 6px 12px; font-size: 0.8rem; background: #10b981; border: none; cursor: pointer;">
+                            Sao chép kết quả
+                        </button>
+                        <button onclick="downloadAiResults()" class="download-btn" style="padding: 6px 12px; font-size: 0.8rem; background: #0ea5e9; border: none; cursor: pointer;">
+                            Tải file Names2.txt
+                        </button>
                     </div>
                 </div>
             </div>
@@ -422,13 +510,13 @@
 
             let completed = 0;
             const results = new Array(total);
-            const concurrency = 5;
+            const concurrency = 1; // Giảm xuống 1 (tải tuần tự) để tránh bị Cloudflare chặn IP
 
             const downloadChapter = async (chap, indexInSubset) => {
                 if (signal.aborted) return;
                 
                 let success = false;
-                let retryCount = 3;
+                let retryCount = 5; // Tăng lên 5 lần thử lại
                 let data = null;
                 
                 while (retryCount > 0 && !success) {
@@ -437,16 +525,22 @@
                         const res = await fetch(`/api/book/${bookId}/${chap.chapterId}`, { signal });
                         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
                         data = await res.json();
-                        if (data && data.title && data.content) {
+                        
+                        // Kiểm tra nếu nội dung bị rỗng hoặc chứa trang chặn Cloudflare
+                        if (data && data.title && data.content && data.content.trim().length > 0) {
+                            if (data.content.includes('challenges.cloudflare.com') || data.content.includes('Just a moment...')) {
+                                throw new Error('Bị chặn bởi Cloudflare Challenge');
+                            }
                             success = true;
                         } else {
-                            throw new Error('Dữ liệu chương không đúng cấu trúc');
+                            throw new Error('Nội dung rỗng hoặc không đúng cấu trúc');
                         }
                     } catch (err) {
                         if (signal.aborted) return;
                         retryCount--;
                         if (retryCount > 0) {
-                            await new Promise(r => setTimeout(r, 1000));
+                            // Chờ 4 giây trước khi thử lại để IP có thời gian hồi phục
+                            await new Promise(r => setTimeout(r, 4000));
                         }
                     }
                 }
@@ -461,7 +555,7 @@
                     results[indexInSubset] = {
                         num: chap.num,
                         title: `Chương ${chap.num}: ${chap.title}`,
-                        content: `[Lỗi tải nội dung chương này từ nguồn gốc]`
+                        content: `[Lỗi tải nội dung chương này từ nguồn gốc do Cloudflare chặn]`
                     };
                 }
                 
@@ -480,6 +574,14 @@
                     if (signal.aborted) break;
                     
                     const chap = tasks[i];
+                    
+                    // Thêm khoảng trễ nghỉ 1.5 giây giữa mỗi chương để tránh spam request lên Cloudflare
+                    if (i > 0) {
+                        await new Promise(r => setTimeout(r, 1500));
+                    }
+                    
+                    if (signal.aborted) break;
+                    
                     const p = downloadChapter(chap, i).then(() => {
                         activePromises.splice(activePromises.indexOf(p), 1);
                     });
@@ -557,6 +659,280 @@
         function cancelDownload() {
             if (window.downloadAbortController) {
                 window.downloadAbortController.abort();
+            }
+        }
+
+        function onApiTypeChange() {
+            const apiType = document.getElementById('aiApiType').value;
+            const endpointContainer = document.getElementById('endpointUrlContainer');
+            const apiKeyLabel = document.getElementById('apiKeyLabel');
+            
+            if (apiType === 'gemini') {
+                endpointContainer.style.display = 'none';
+                apiKeyLabel.innerText = 'Gemini API Key:';
+            } else {
+                endpointContainer.style.display = 'flex';
+                apiKeyLabel.innerText = 'API Key:';
+            }
+        }
+
+        function toggleAiPanel() {
+            const panel = document.getElementById('aiPanel');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                
+                // Set default range values based on current chapters
+                const chapterItems = document.querySelectorAll('.chapter-item');
+                const count = chapterItems.length;
+                
+                const startInput = document.getElementById('aiStartChapter');
+                const endInput = document.getElementById('aiEndChapter');
+                
+                startInput.max = count;
+                endInput.max = count;
+                
+                startInput.value = 1;
+                endInput.value = Math.min(10, count);
+                
+                // Load credentials from localStorage, fallback to defaults
+                const savedApiType = localStorage.getItem('ai_api_type') || 'openai';
+                document.getElementById('aiApiType').value = savedApiType;
+                
+                document.getElementById('cometApiKey').value = localStorage.getItem('comet_api_key') || '';
+                document.getElementById('cometModel').value = localStorage.getItem('comet_model') || 'gemini-2.5-flash-lite';
+                document.getElementById('cometEndpoint').value = localStorage.getItem('comet_endpoint') || 'https://api.cometapi.com/v1/chat/completions';
+                
+                onApiTypeChange();
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+
+        let aiScanAbortController = null;
+        let progressInterval = null;
+
+        async function startAiScan() {
+            const bookId = '{{bookId}}';
+            const apiType = document.getElementById('aiApiType').value;
+            const apiKey = document.getElementById('cometApiKey').value.trim();
+            const model = document.getElementById('cometModel').value.trim();
+            const endpointUrl = document.getElementById('cometEndpoint').value.trim();
+            const startNum = parseInt(document.getElementById('aiStartChapter').value, 10);
+            const endNum = parseInt(document.getElementById('aiEndChapter').value, 10);
+            
+            const chapterItems = document.querySelectorAll('.chapter-item');
+            const totalChaps = chapterItems.length;
+
+            if (!apiKey) {
+                alert('Vui lòng điền API Key!');
+                return;
+            }
+            if (isNaN(startNum) || isNaN(endNum) || startNum < 1 || endNum < startNum || endNum > totalChaps) {
+                alert('Khoảng chương không hợp lệ! Vui lòng chọn trong khoảng từ 1 đến ' + totalChaps);
+                return;
+            }
+            if (endNum - startNum + 1 > 30) {
+                alert('Để tối ưu chi phí và tránh lỗi thời gian chờ, bạn chỉ nên quét tối đa 30 chương mỗi lần!');
+                return;
+            }
+
+            // Save credentials
+            localStorage.setItem('ai_api_type', apiType);
+            localStorage.setItem('comet_api_key', apiKey);
+            localStorage.setItem('comet_model', model);
+            localStorage.setItem('comet_endpoint', endpointUrl);
+
+            // UI states
+            const scanBtn = document.getElementById('aiScanBtn');
+            const cancelBtn = document.getElementById('aiCancelBtn');
+            const progressContainer = document.getElementById('aiProgressContainer');
+            const progressBar = document.getElementById('aiProgressBar');
+            const percentText = document.getElementById('aiPercentText');
+            const statusText = document.getElementById('aiStatusText');
+            const resultContainer = document.getElementById('aiResultContainer');
+            const resultTextarea = document.getElementById('aiResultTextarea');
+
+            scanBtn.disabled = true;
+            scanBtn.style.opacity = '0.5';
+            scanBtn.style.pointerEvents = 'none';
+            cancelBtn.style.display = 'inline-block';
+            
+            progressContainer.style.display = 'flex';
+            progressBar.style.width = '0%';
+            percentText.innerText = '0%';
+            statusText.innerText = 'Đang tải danh sách chương & chuẩn bị nội dung...';
+            
+            resultContainer.style.display = 'none';
+            resultTextarea.value = '';
+
+            aiScanAbortController = new AbortController();
+            const signal = aiScanAbortController.signal;
+
+            // Animate fake progress to give user visual feedback during wait
+            let progress = 0;
+            progressBar.style.transition = 'width 0.3s ease-out';
+            
+            progressInterval = setInterval(() => {
+                if (progress < 90) {
+                    progress += Math.floor(Math.random() * 5) + 2;
+                    if (progress > 90) progress = 90;
+                    progressBar.style.width = `${progress}%`;
+                    percentText.innerText = `${progress}%`;
+                    if (progress < 25) {
+                        statusText.innerText = 'Đang tải dữ liệu chương truyện...';
+                    } else if (progress < 60) {
+                        statusText.innerText = `Đang gửi dữ liệu đến ${apiType === 'gemini' ? 'Gemini Direct API' : 'CometAPI'}...`;
+                    } else {
+                        statusText.innerText = 'AI đang phân tích & trích xuất tên riêng song song...';
+                    }
+                }
+            }, 800);
+
+            try {
+                const response = await fetch('/api/extract-names-multi', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        bookId,
+                        startChapter: startNum,
+                        endChapter: endNum,
+                        apiKey,
+                        model,
+                        apiType,
+                        endpointUrl
+                    }),
+                    signal
+                });
+
+                const data = await response.json();
+                clearInterval(progressInterval);
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Lỗi server khi quét.');
+                }
+
+                progressBar.style.width = '100%';
+                percentText.innerText = '100%';
+                statusText.innerText = 'Đã hoàn tất quét!';
+
+                if (data.names) {
+                    resultTextarea.value = data.names;
+                    resultContainer.style.display = 'flex';
+                } else {
+                    resultTextarea.value = '';
+                    alert('Không tìm thấy tên riêng nào mới hoặc nội dung chương không có tên riêng.');
+                }
+            } catch (err) {
+                clearInterval(progressInterval);
+                console.error(err);
+                if (signal.aborted) {
+                    statusText.innerText = 'Đã hủy quét tên bằng AI.';
+                    percentText.innerText = 'Đã hủy';
+                    progressBar.style.width = '0%';
+                } else {
+                    statusText.innerText = `Lỗi: ${err.message}`;
+                    percentText.innerText = 'Thất bại';
+                    progressBar.style.width = '0%';
+                }
+            } finally {
+                scanBtn.disabled = false;
+                scanBtn.style.opacity = '1';
+                scanBtn.style.pointerEvents = 'auto';
+                cancelBtn.style.display = 'none';
+                aiScanAbortController = null;
+            }
+        }
+
+        function cancelAiScan() {
+            if (aiScanAbortController) {
+                aiScanAbortController.abort();
+            }
+        }
+
+        function copyAiResults() {
+            const textarea = document.getElementById('aiResultTextarea');
+            textarea.select();
+            document.execCommand('copy');
+            
+            const btn = document.getElementById('aiCopyBtn');
+            const originalText = btn.innerText;
+            btn.innerText = 'Đã sao chép!';
+            btn.style.background = '#059669';
+            
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.style.background = '#10b981';
+            }, 2000);
+        }
+
+        function downloadAiResults() {
+            const text = document.getElementById('aiResultTextarea').value;
+            if (!text) return;
+
+            const bookTitle = document.querySelector('.book-title').innerText.trim();
+            const sanitizedTitle = bookTitle.replace(/[\\/:*?"<>|\r\n\t]/g, '').trim();
+            
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Names2_${sanitizedTitle}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 1500);
+        }
+
+        async function saveAiResultsToServer() {
+            const text = document.getElementById('aiResultTextarea').value.trim();
+            if (!text) {
+                alert('Khung kết quả đang trống, không có gì để lưu!');
+                return;
+            }
+
+            const btn = document.getElementById('aiSaveBtn');
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = 'Đang lưu...';
+            btn.style.opacity = '0.7';
+
+            try {
+                const response = await fetch('/api/save-names2', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ names: text })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || `HTTP error ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                btn.innerText = `Đã gộp ${data.count} từ!`;
+                btn.style.background = '#059669';
+                btn.style.opacity = '1';
+                
+                alert(`Đã lưu gộp thành công vào file Names2.txt hệ thống! Tổng cộng hiện có ${data.count} mục từ.`);
+
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                    btn.style.background = '#6366f1';
+                }, 3000);
+
+            } catch (err) {
+                console.error('Lỗi khi lưu Names2:', err);
+                alert(`Lỗi khi lưu Names2: ${err.message}`);
+                btn.disabled = false;
+                btn.innerText = originalText;
+                btn.style.background = '#ef4444';
+                btn.style.opacity = '1';
             }
         }
         
