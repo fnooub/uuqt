@@ -353,7 +353,7 @@ app.get('/api/book/:bookId/:chapterId', async (req, res) => {
 
 // API quét và trích xuất tên riêng từ nhiều chương truyện song song bằng AI
 app.post('/api/extract-names-multi', rateLimit, async (req, res) => {
-    const { bookId, startChapter, endChapter, apiKey, model, apiType, endpointUrl } = req.body ?? {};
+    const { bookId, startChapter, endChapter, apiKey, model, apiType, endpointUrl, customSystemPrompt } = req.body ?? {};
     
     if (!/^\d+$/.test(bookId)) {
         return res.status(400).json({ error: 'ID truyện không hợp lệ.' });
@@ -435,7 +435,9 @@ app.post('/api/extract-names-multi', rateLimit, async (req, res) => {
             // Giới hạn 8000 ký tự đầu tiên để tránh tràn ngữ cảnh đầu vào của AI
             const trimmedText = rawText.slice(0, 8000);
             
-            const systemPrompt = `Bạn là một chuyên gia phân tích ngôn ngữ Trung - Việt chuyên trích xuất tên riêng cho truyện.\nNhiệm vụ của bạn là:\n1. Đọc kỹ văn bản tiếng Trung được cung cấp.\n2. Trích xuất tất cả các tên riêng có trong văn bản bao gồm: Tên nhân vật (người, thần thú, yêu quái...), Tên địa danh (tông môn, thành trì, núi sông...), Tên chiêu thức (kỹ năng, công pháp...), Tên vũ khí/vật phẩm đặc thù.\n3. Dịch các tên riêng đó sang âm Hán Việt chuẩn xác nhất.\n4. CHỈ trả về kết quả theo định dạng 'Từ_tiếng_Trung=Nghĩa_Hán_Việt' (ví dụ: '云飞=Vân Phi'), mỗi dòng một tên.\n5. KHÔNG giải thích, KHÔNG thêm tiêu đề, KHÔNG thêm số thứ tự hay bất kỳ ký tự thừa nào khác.`;
+            const systemPrompt = customSystemPrompt && customSystemPrompt.trim()
+                ? customSystemPrompt.trim()
+                : `Bạn là một chuyên gia phân tích ngôn ngữ Trung - Việt chuyên trích xuất tên riêng cho truyện.\nNhiệm vụ của bạn là:\n1. Đọc kỹ văn bản tiếng Trung được cung cấp.\n2. Trích xuất tất cả các tên riêng có trong văn bản bao gồm: Tên nhân vật (người, thần thú, yêu quái...), Tên địa danh (tông môn, thành trì, núi sông...), Tên chiêu thức (kỹ năng, công pháp...), Tên vũ khí/vật phẩm đặc thù.\n3. Dịch các tên riêng đó sang âm Hán Việt chuẩn xác nhất.\n4. CHỈ trả về kết quả theo định dạng 'Từ_tiếng_Trung=Nghĩa_Hán_Việt' (ví dụ: '云飞=Vân Phi'), mỗi dòng một tên.\n5. KHÔNG giải thích, KHÔNG thêm tiêu đề, KHÔNG thêm số thứ tự hay bất kỳ ký tự thừa nào khác.`;
             const userPrompt = `Trích xuất tên riêng cho chương truyện sau:\n---\n${trimmedText}\n---`;
             
             let resultText = '';
