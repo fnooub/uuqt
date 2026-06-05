@@ -80,7 +80,9 @@ class Dictionary {
     constructor() {
         this.trie = new Trie();
         this.phienAmMap = new Map(); // char đơn → phiên âm
+        this.names2Map = new Map();  // Từ điển Names2.txt toàn cục
         this.ready = false;
+        this.dataDir = null;
     }
 
     /**
@@ -131,7 +133,26 @@ class Dictionary {
         return fs.readFileSync(filePath, 'utf8');
     }
 
+    loadNames2() {
+        this.names2Map = new Map();
+        const names2Path = path.join(this.dataDir || __dirname, 'Names2.txt');
+        if (fs.existsSync(names2Path)) {
+            try {
+                const content = fs.readFileSync(names2Path, 'utf8');
+                this._parseFile(content, (key, value) => {
+                    this.names2Map.set(sify(key), value);
+                });
+                console.log(`[Dictionary] Đã tải từ điển Names2.txt toàn cục với ${this.names2Map.size} mục từ.`);
+            } catch (err) {
+                console.error(`[Dictionary] Lỗi khi load Names2.txt: ${err.message}`);
+            }
+        } else {
+            console.log(`[Dictionary] Không tìm thấy file Names2.txt toàn cục (sẽ được tạo khi lưu lần đầu).`);
+        }
+    }
+
     init(dataDir = __dirname) {
+        this.dataDir = dataDir;
         console.time('dictionary_load');
 
         // Load Names trước (ưu tiên cao hơn VietPhrase khi trùng key)
@@ -149,6 +170,9 @@ class Dictionary {
         this._parseFile(phienAmContent, (key, value) => {
             this.phienAmMap.set(key, value);
         });
+
+        // Load Names2.txt toàn cục
+        this.loadNames2();
 
         this.ready = true;
         console.timeEnd('dictionary_load');
@@ -191,9 +215,15 @@ class Dictionary {
         for (const token of tokens) {
             if (Dictionary.SKIP_WORDS.has(token)) continue;
 
-            // Ưu tiên 1: Names2 per-request (O(1))
+            // Ưu tiên 1a: Names2 per-request (O(1))
             if (names2Map) {
                 const override = names2Map.get(token);
+                if (override) { parts.push(override); continue; }
+            }
+
+            // Ưu tiên 1b: Names2 toàn cục hệ thống (O(1))
+            if (this.names2Map) {
+                const override = this.names2Map.get(token);
                 if (override) { parts.push(override); continue; }
             }
 

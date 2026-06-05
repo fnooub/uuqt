@@ -6,6 +6,8 @@ const path = require('path');
 const fs = require('fs');
 const cheerio = require('cheerio');
 const { exec } = require('child_process');
+const axios = require('axios');
+const { sify } = require('chinese-conv');
 const { Dictionary } = require('./Dictionary');
 
 // --- Khởi tạo từ điển ĐỒNG BỘ trước khi làm gì khác ---
@@ -346,6 +348,246 @@ app.get('/api/book/:bookId/:chapterId', async (req, res) => {
     } catch (e) {
         console.error(`Lỗi tải JSON chương ${chapterId}:`, e);
         res.status(500).json({ error: 'Không thể tải nội dung chương. Lỗi: ' + e.message });
+    }
+});
+
+// API quét và trích xuất tên riêng từ nhiều chương truyện song song bằng AI
+app.post('/api/extract-names-multi', rateLimit, async (req, res) => {
+    const { bookId, startChapter, endChapter, apiKey, model, apiType, endpointUrl } = req.body ?? {};
+    
+    if (!/^\d+$/.test(bookId)) {
+        return res.status(400).json({ error: 'ID truyện không hợp lệ.' });
+    }
+    
+    const startNum = parseInt(startChapter, 10);
+    const endNum = parseInt(endChapter, 10);
+    
+    if (isNaN(startNum) || isNaN(endNum) || startNum < 1 || endNum < startNum) {
+        return res.status(400).json({ error: 'Khoảng chương không hợp lệ.' });
+    }
+    
+    const finalApiType = apiType || 'openai';
+    const finalApiKey = apiKey || process.env.COMETAPI_KEY || '';
+    const finalModel = model || process.env.COMETAPI_MODEL || 'gemini-2.5-flash-lite';
+    const finalEndpointUrl = endpointUrl || 'https://api.cometapi.com/v1/chat/completions';
+    
+    if (!finalApiKey) {
+        return res.status(400).json({ error: 'Thiếu API Key. Vui lòng cấu hình trong bảng điều khiển UI.' });
+    }
+    
+    try {
+        // 1. Tải danh sách chương
+        const url = `https://uukanshu.cc/book/${bookId}/`;
+        const html = await fetchHtmlWithCurl(url);
+        const $ = cheerio.load(html);
+        
+        const chapterList = [];
+        const chapterLinks = $('#list-chapterAll dd a, .chapterlist dd a');
+        chapterLinks.each((i, el) => {
+            const href = $(el).attr('href');
+            const title = $(el).text().trim();
+            if (href && title) {
+                const match = href.match(/\/book\/\d+\/(\d+)\.html/i);
+                if (match) {
+                    chapterList.push({
+                        chapterId: match[1],
+                        originalTitle: title
+                    });
+                }
+            }
+        });
+        
+        if (chapterList.length === 0) {
+            return res.status(404).json({ error: 'Không tìm thấy danh sách chương.' });
+        }
+        
+        // Giới hạn tối đa quét 30 chương một lần để tránh lạm dụng và quá tải
+        const countToScan = endNum - startNum + 1;
+        if (countToScan > 30) {
+            return res.status(400).json({ error: 'Chỉ hỗ trợ quét tối đa 30 chương một lúc.' });
+        }
+        
+        // Lọc các chương cần quét (1-indexed)
+        const targetChapters = chapterList.slice(startNum - 1, endNum);
+        if (targetChapters.length === 0) {
+            return res.status(400).json({ error: 'Không tìm thấy chương nào trong khoảng đã chọn.' });
+        }
+        
+        console.log(`[AI Scanner] Bắt đầu quét tên riêng từ chương ${startNum} đến ${endNum} của truyện ${bookId} bằng API ${finalApiType}...`);
+        
+        // 2. Chạy tải và phân tích song song
+        const processChapter = async (chap, idx) => {
+            const chapUrl = `https://uukanshu.cc/book/${bookId}/${chap.chapterId}.html`;
+            const chapHtml = await fetchHtmlWithCurl(chapUrl);
+            const c$ = cheerio.load(chapHtml);
+            
+            const titleRaw = c$('h1.pt10').text().trim() || chap.originalTitle;
+            const contentEl = c$('div.readcotent');
+            contentEl.find('script').remove();
+            
+            const paragraphs = (contentEl.html() || '')
+                .split(/<br\s*\/?>/i)
+                .map(p => cheerio.load(p).text().replace(/&nbsp;/g, ' ').replace(/[\r\n\t]+/g, ' ').trim())
+                .filter(p => p.length > 0 && !p.includes('uu看书') && !p.includes('uukanshu'));
+            
+            const rawText = [titleRaw, ...paragraphs].join('\n');
+            
+            // Giới hạn 8000 ký tự đầu tiên để tránh tràn ngữ cảnh đầu vào của AI
+            const trimmedText = rawText.slice(0, 8000);
+            
+            const systemPrompt = `Bạn là một chuyên gia phân tích ngôn ngữ Trung - Việt chuyên trích xuất tên riêng cho truyện.\nNhiệm vụ của bạn là:\n1. Đọc kỹ văn bản tiếng Trung được cung cấp.\n2. Trích xuất tất cả các tên riêng có trong văn bản bao gồm: Tên nhân vật (người, thần thú, yêu quái...), Tên địa danh (tông môn, thành trì, núi sông...), Tên chiêu thức (kỹ năng, công pháp...), Tên vũ khí/vật phẩm đặc thù.\n3. Dịch các tên riêng đó sang âm Hán Việt chuẩn xác nhất.\n4. CHỈ trả về kết quả theo định dạng 'Từ_tiếng_Trung=Nghĩa_Hán_Việt' (ví dụ: '云飞=Vân Phi'), mỗi dòng một tên.\n5. KHÔNG giải thích, KHÔNG thêm tiêu đề, KHÔNG thêm số thứ tự hay bất kỳ ký tự thừa nào khác.`;
+            const userPrompt = `Trích xuất tên riêng cho chương truyện sau:\n---\n${trimmedText}\n---`;
+            
+            let resultText = '';
+            
+            if (finalApiType === 'gemini') {
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${finalModel}:generateContent?key=${finalApiKey}`;
+                const response = await axios.post(geminiUrl, {
+                    contents: [
+                        {
+                            role: 'user',
+                            parts: [
+                                {
+                                    text: `${systemPrompt}\n\nYêu cầu cụ thể:\n${userPrompt}`
+                                }
+                            ]
+                        }
+                    ],
+                    generationConfig: {
+                        temperature: 0.3
+                    }
+                }, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 60000
+                });
+                
+                resultText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            } else {
+                // OpenAI / CometAPI
+                const response = await axios.post(finalEndpointUrl, {
+                    model: finalModel,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    temperature: 0.3
+                }, {
+                    headers: {
+                        'Authorization': `Bearer ${finalApiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 60000
+                });
+                
+                resultText = response.data?.choices?.[0]?.message?.content || '';
+            }
+            
+            return resultText;
+        };
+        
+        // Thực thi song song tất cả các chương bằng Promise.all
+        const results = await Promise.all(
+            targetChapters.map((chap, idx) => 
+                processChapter(chap, idx).catch(err => {
+                    console.error(`[AI Scanner] Lỗi khi xử lý chương ${startNum + idx}: ${err.message}`);
+                    return ''; // Trả về chuỗi rỗng nếu lỗi để không chặn các chương khác
+                })
+            )
+        );
+        
+        // 3. Gộp kết quả và loại bỏ trùng lặp (Tự động quy về chữ giản thể để chống trùng lặp giản thể/phồn thể)
+        const nameMap = new Map();
+        results.forEach(resText => {
+            if (!resText) return;
+            const lines = resText.split('\n');
+            lines.forEach(line => {
+                const eqIdx = line.indexOf('=');
+                if (eqIdx <= 0) return;
+                
+                const rawKey = line.slice(0, eqIdx).trim();
+                const value = line.slice(eqIdx + 1).trim();
+                
+                if (rawKey && value) {
+                    const key = sify(rawKey); // Đồng bộ khóa thành chữ giản thể
+                    if (!nameMap.has(key)) {
+                        nameMap.set(key, value);
+                    }
+                }
+            });
+        });
+        
+        // Kết xuất dữ liệu sang text key=value
+        let extractedText = '';
+        for (const [k, v] of nameMap) {
+            extractedText += `${k}=${v}\n`;
+        }
+        
+        console.log(`[AI Scanner] Hoàn thành quét! Tìm thấy tổng cộng ${nameMap.size} tên riêng.`);
+        res.json({ names: extractedText.trim() });
+        
+    } catch (err) {
+        console.error('[AI Scanner] Lỗi hệ thống:', err);
+        res.status(500).json({ error: 'Lỗi máy chủ khi quét tên riêng: ' + err.message });
+    }
+});
+
+// API cập nhật và lưu gộp từ điển Names2.txt toàn hệ thống
+app.post('/api/save-names2', rateLimit, async (req, res) => {
+    const { names } = req.body ?? {};
+    if (typeof names !== 'string') {
+        return res.status(400).json({ error: 'Nội dung names không hợp lệ.' });
+    }
+    
+    try {
+        const names2Path = path.join(__dirname, 'Names2.txt');
+        let existingMap = new Map();
+        
+        // 1. Đọc dữ liệu cũ nếu có để gộp thông minh
+        if (fs.existsSync(names2Path)) {
+            const oldContent = fs.readFileSync(names2Path, 'utf8');
+            const lines = oldContent.split('\n');
+            lines.forEach(line => {
+                const eqIdx = line.indexOf('=');
+                if (eqIdx <= 0) return;
+                const key = sify(line.slice(0, eqIdx).trim());
+                const val = line.slice(eqIdx + 1).trim();
+                if (key && val) {
+                    existingMap.set(key, val);
+                }
+            });
+        }
+        
+        // 2. Gộp dữ liệu mới quét được vào bản đồ
+        const newLines = names.split('\n');
+        newLines.forEach(line => {
+            const eqIdx = line.indexOf('=');
+            if (eqIdx <= 0) return;
+            const key = sify(line.slice(0, eqIdx).trim());
+            const val = line.slice(eqIdx + 1).trim();
+            if (key && val) {
+                existingMap.set(key, val); // Ghi đè hoặc thêm mới từ dịch
+            }
+        });
+        
+        // 3. Viết lại tệp tin Names2.txt
+        let newContent = '';
+        for (const [k, v] of existingMap) {
+            newContent += `${k}=${v}\n`;
+        }
+        
+        fs.writeFileSync(names2Path, newContent.trim() + '\n', 'utf8');
+        
+        // 4. Reload từ điển trong RAM tức thì
+        dictionary.loadNames2();
+        
+        console.log(`[Names2 Server] Đã lưu gộp Names2.txt toàn hệ thống. Tổng số: ${existingMap.size} mục từ.`);
+        res.json({ success: true, count: existingMap.size });
+        
+    } catch (err) {
+        console.error('[Names2 Server] Lỗi khi lưu từ điển:', err);
+        res.status(500).json({ error: 'Lỗi máy chủ khi lưu từ điển: ' + err.message });
     }
 });
 
