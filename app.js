@@ -351,7 +351,7 @@ app.get('/api/book/:bookId/:chapterId', async (req, res) => {
     }
 });
 
-// API quét và trích xuất tên riêng từ nhiều chương truyện song song bằng AI
+// API quét và trích xuất tên riêng từ nhiều chương truyện tuần tự bằng AI
 app.post('/api/extract-names-multi', rateLimit, async (req, res) => {
     const { bookId, startChapter, endChapter, apiKey, model, apiType, endpointUrl, customSystemPrompt } = req.body ?? {};
     
@@ -415,7 +415,7 @@ app.post('/api/extract-names-multi', rateLimit, async (req, res) => {
         
         console.log(`[AI Scanner] Bắt đầu quét tên riêng từ chương ${startNum} đến ${endNum} của truyện ${bookId} bằng API ${finalApiType}...`);
         
-        // 2. Chạy tải và phân tích song song
+        // 2. Định nghĩa hàm xử lý từng chương
         const processChapter = async (chap, idx) => {
             const chapUrl = `https://uukanshu.cc/book/${bookId}/${chap.chapterId}.html`;
             const chapHtml = await fetchHtmlWithCurl(chapUrl);
@@ -489,15 +489,25 @@ app.post('/api/extract-names-multi', rateLimit, async (req, res) => {
             return resultText;
         };
         
-        // Thực thi song song tất cả các chương bằng Promise.all
-        const results = await Promise.all(
-            targetChapters.map((chap, idx) => 
-                processChapter(chap, idx).catch(err => {
-                    console.error(`[AI Scanner] Lỗi khi xử lý chương ${startNum + idx}: ${err.message}`);
-                    return ''; // Trả về chuỗi rỗng nếu lỗi để không chặn các chương khác
-                })
-            )
-        );
+        // Thực thi tuần tự từng chương để tránh lỗi rate limit hoặc bị chặn
+        const results = [];
+        for (let i = 0; i < targetChapters.length; i++) {
+            const chap = targetChapters[i];
+            const chapIdx = startNum + i;
+            console.log(`[AI Scanner] Đang xử lý chương ${chapIdx}/${endNum}: ${chap.originalTitle}`);
+            try {
+                const resultText = await processChapter(chap, i);
+                results.push(resultText);
+            } catch (err) {
+                console.error(`[AI Scanner] Lỗi khi xử lý chương ${chapIdx}: ${err.message}`);
+                results.push('');
+            }
+            
+            // Tránh spam request dồn dập
+            if (i < targetChapters.length - 1) {
+                await new Promise(r => setTimeout(r, 300));
+            }
+        }
         
         // 3. Gộp kết quả và loại bỏ trùng lặp (Tự động quy về chữ giản thể để chống trùng lặp giản thể/phồn thể)
         const nameMap = new Map();
@@ -932,6 +942,170 @@ app.get('/', async (req, res) => {
     } catch (e) {
         console.error('Lỗi khi tải trang chủ:', e);
         res.status(500).send('Không thể tải trang chủ. Lỗi: ' + e.message);
+    }
+});
+
+// --- API CRUD Names2 ---
+
+// Giao diện quản lý Names2
+app.get('/names2', (req, res) => {
+    res.sendFile(path.join(__dirname, 'views', 'names2.html'));
+});
+
+// Lấy danh sách từ trong Names2.txt dưới dạng JSON
+app.get('/api/names2', (req, res) => {
+    try {
+        const names2Path = path.join(__dirname, 'Names2.txt');
+        const list = [];
+        if (fs.existsSync(names2Path)) {
+            const content = fs.readFileSync(names2Path, 'utf8');
+            const lines = content.split('\n');
+            lines.forEach(line => {
+                const eqIdx = line.indexOf('=');
+                if (eqIdx <= 0) return;
+                const key = sify(line.slice(0, eqIdx).trim());
+                const val = line.slice(eqIdx + 1).trim();
+                if (key && val) {
+                    list.push({ key, value: val });
+                }
+            });
+        }
+        res.json({ list });
+    } catch (err) {
+        console.error('Lỗi khi lấy từ điển Names2:', err);
+        res.status(500).json({ error: 'Lỗi server: ' + err.message });
+    }
+});
+
+// Thêm mới hoặc cập nhật một mục từ
+app.post('/api/names2/upsert', (req, res) => {
+    const { key, value } = req.body ?? {};
+    if (typeof key !== 'string' || typeof value !== 'string' || !key.trim() || !value.trim()) {
+        return res.status(400).json({ error: 'Khóa (key) và giá trị (value) phải là chuỗi không rỗng.' });
+    }
+
+    try {
+        const targetKey = sify(key.trim());
+        const targetVal = value.trim();
+        const names2Path = path.join(__dirname, 'Names2.txt');
+        let existingMap = new Map();
+
+        if (fs.existsSync(names2Path)) {
+            const content = fs.readFileSync(names2Path, 'utf8');
+            content.split('\n').forEach(line => {
+                const eqIdx = line.indexOf('=');
+                if (eqIdx <= 0) return;
+                const k = sify(line.slice(0, eqIdx).trim());
+                const v = line.slice(eqIdx + 1).trim();
+                if (k && v) existingMap.set(k, v);
+            });
+        }
+
+        existingMap.set(targetKey, targetVal);
+
+        let newContent = '';
+        for (const [k, v] of existingMap) {
+            newContent += `${k}=${v}\n`;
+        }
+        fs.writeFileSync(names2Path, newContent.trim() + '\n', 'utf8');
+        
+        dictionary.loadNames2(); // Reload RAM
+        res.json({ success: true, count: existingMap.size });
+    } catch (err) {
+        console.error('Lỗi khi lưu từ điển:', err);
+        res.status(500).json({ error: 'Lỗi server: ' + err.message });
+    }
+});
+
+// Xóa một từ khỏi từ điển
+app.post('/api/names2/delete', (req, res) => {
+    const { key } = req.body ?? {};
+    if (typeof key !== 'string' || !key.trim()) {
+        return res.status(400).json({ error: 'Thiếu khóa (key) cần xóa.' });
+    }
+
+    try {
+        const targetKey = sify(key.trim());
+        const names2Path = path.join(__dirname, 'Names2.txt');
+        let existingMap = new Map();
+
+        if (fs.existsSync(names2Path)) {
+            const content = fs.readFileSync(names2Path, 'utf8');
+            content.split('\n').forEach(line => {
+                const eqIdx = line.indexOf('=');
+                if (eqIdx <= 0) return;
+                const k = sify(line.slice(0, eqIdx).trim());
+                const v = line.slice(eqIdx + 1).trim();
+                if (k && v) existingMap.set(k, v);
+            });
+        }
+
+        if (existingMap.has(targetKey)) {
+            existingMap.delete(targetKey);
+            let newContent = '';
+            for (const [k, v] of existingMap) {
+                newContent += `${k}=${v}\n`;
+            }
+            fs.writeFileSync(names2Path, (newContent ? newContent.trim() + '\n' : ''), 'utf8');
+            dictionary.loadNames2(); // Reload RAM
+            res.json({ success: true, count: existingMap.size });
+        } else {
+            res.json({ success: true, count: existingMap.size, message: 'Khóa không tồn tại.' });
+        }
+    } catch (err) {
+        console.error('Lỗi khi xóa từ:', err);
+        res.status(500).json({ error: 'Lỗi server: ' + err.message });
+    }
+});
+
+// Xóa sạch toàn bộ từ điển
+app.post('/api/names2/clear', (req, res) => {
+    try {
+        const names2Path = path.join(__dirname, 'Names2.txt');
+        fs.writeFileSync(names2Path, '', 'utf8');
+        dictionary.loadNames2(); // Reload RAM
+        res.json({ success: true, count: 0 });
+    } catch (err) {
+        console.error('Lỗi khi xóa sạch từ điển:', err);
+        res.status(500).json({ error: 'Lỗi server: ' + err.message });
+    }
+});
+
+// Lưu gộp từ đĩa thô đè trực tiếp toàn bộ (phục vụ Bulk Edit)
+app.post('/api/names2/save-raw', (req, res) => {
+    const { content } = req.body ?? {};
+    if (typeof content !== 'string') {
+        return res.status(400).json({ error: 'Nội dung không hợp lệ.' });
+    }
+
+    try {
+        const names2Path = path.join(__dirname, 'Names2.txt');
+        let newContent = '';
+        let count = 0;
+        
+        const lines = content.split('\n');
+        const map = new Map();
+        lines.forEach(line => {
+            const eqIdx = line.indexOf('=');
+            if (eqIdx <= 0) return;
+            const k = sify(line.slice(0, eqIdx).trim());
+            const v = line.slice(eqIdx + 1).trim();
+            if (k && v) {
+                map.set(k, v);
+            }
+        });
+
+        for (const [k, v] of map) {
+            newContent += `${k}=${v}\n`;
+            count++;
+        }
+
+        fs.writeFileSync(names2Path, (newContent ? newContent.trim() + '\n' : ''), 'utf8');
+        dictionary.loadNames2(); // Reload RAM
+        res.json({ success: true, count });
+    } catch (err) {
+        console.error('Lỗi khi lưu từ điển raw:', err);
+        res.status(500).json({ error: 'Lỗi server: ' + err.message });
     }
 });
 
