@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Từ điển Tùy chỉnh (Names2)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --success: #10b981;
+            --success-hover: #059669;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --border-focus: #a5b4fc;
+            --glass-bg: #ffffff;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 20px 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 720px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Nav Header */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .back-btn:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .page-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* Glass Card wrapper */
+        .glass-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Tab Switcher */
+        .tab-container {
+            display: flex;
+            border-bottom: 2px solid var(--border);
+            gap: 16px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 8px 4px 12px 4px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        /* Add Item Form */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        input[type="text"], textarea {
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            outline: none;
+            font-family: inherit;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            background: var(--bg-primary);
+            transition: all 0.2s;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            border-color: var(--border-focus);
+            background: var(--bg-secondary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        button.btn-primary {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            align-self: flex-end;
+            min-height: 42px;
+        }
+
+        button.btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        button.btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            align-self: flex-end;
+            min-height: 42px;
+        }
+
+        button.btn-secondary:hover {
+            color: var(--text-main);
+            border-color: var(--text-muted);
+        }
+
+        /* Search bar and count */
+        .search-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-top: 10px;
+        }
+
+        .search-input {
+            flex: 1;
+            max-width: 320px;
+        }
+
+        .dict-meta-info {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Words List / Table */
+        .list-container {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: var(--bg-secondary);
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .word-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+
+        .word-row:last-child {
+            border-bottom: none;
+        }
+
+        .word-row:hover {
+            background: var(--bg-primary);
+        }
+
+        .word-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .word-chinese {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 80px;
+        }
+
+        .word-arrow {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .word-vietnamese {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--accent);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            margin-left: 16px;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .action-btn.btn-edit {
+            color: var(--accent);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .action-btn.btn-edit:hover {
+            color: white;
+            background: var(--accent);
+        }
+
+        .action-btn.btn-delete {
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .action-btn.btn-delete:hover {
+            color: white;
+            background: var(--danger);
+        }
+
+        /* Bulk editor styling */
+        .bulk-textarea {
+            width: 100%;
+            height: 350px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            resize: vertical;
+        }
+
+        .bulk-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+        }
+
+        /* Global operations */
+        .global-ops {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+
+        .btn-danger-all {
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-danger-all:hover {
+            background: var(--danger-hover);
+        }
+
+        /* Custom Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #1e293b;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success);
+        }
+
+        .toast.danger {
+            border-left: 4px solid var(--danger);
+        }
+
+        /* Empty state */
+        .empty-state {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <a href="/" class="back-btn">
+            <span>←</span> Quay lại Trang chủ
+        </a>
+        <h1 class="page-title">Quản lý từ điển Names2</h1>
+    </header>
+
+    <div class="glass-card">
+        <div class="tab-container">
+            <button class="tab-btn active" id="tabCrudBtn" onclick="switchTab('crud')">Quản lý từ khóa</button>
+            <button class="tab-btn" id="tabBulkBtn" onclick="switchTab('bulk')">Chỉnh sửa văn bản thô (Bulk Edit)</button>
+        </div>
+
+        <!-- TAB 1: CRUD Manager -->
+        <div id="tabCrud" style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Form thêm/sửa -->
+            <form id="upsertForm" onsubmit="handleUpsert(event)" style="display: flex; flex-direction: column; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+                <h3 id="formTitle" style="font-size: 1rem; font-weight: 700;">Thêm từ mới</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="chineseKey">Từ gốc (Tiếng Trung)</label>
+                        <input type="text" id="chineseKey" placeholder="Ví dụ: 云飞" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="vietValue">Nghĩa dịch (Hán Việt/VietPhrase)</label>
+                        <input type="text" id="vietValue" placeholder="Ví dụ: Vân Phi" required autocomplete="off">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; align-self: flex-end;">
+                    <button type="button" id="btnCancelEdit" class="btn-secondary" style="display: none;" onclick="cancelEditMode()">Hủy</button>
+                    <button type="submit" id="btnSubmitForm" class="btn-primary">Thêm từ khóa</button>
+                </div>
+            </form>
+
+            <!-- Search and Metadata -->
+            <div class="search-container">
+                <input type="text" id="searchBar" class="search-input" placeholder="Tìm kiếm từ khóa hoặc nghĩa..." oninput="handleSearch()">
+                <div class="dict-meta-info" id="metaInfo">Đang tải...</div>
+            </div>
+
+            <!-- List of words -->
+            <div class="list-container" id="listContainer">
+                <!-- Word rows will be inserted here dynamically -->
+            </div>
+
+            <!-- Clear All operation -->
+            <div class="global-ops">
+                <button class="btn-danger-all" onclick="clearAllDictionary()">Xóa toàn bộ từ điển</button>
+            </div>
+        </div>
+
+        <!-- TAB 2: Bulk Raw Editor -->
+        <div id="tabBulk" style="display: none; flex-direction: column; gap: 16px;">
+            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+                Dán toàn bộ danh sách từ điển tùy chỉnh của bạn tại đây dưới định dạng <code>Từ_Gốc=Nghĩa_Dịch</code> (mỗi dòng một từ). Định dạng sai hoặc dòng trống sẽ tự động được lọc bỏ khi lưu.
+            </p>
+            <textarea id="bulkTextarea" class="bulk-textarea" placeholder="云飞=Vân Phi&#10;青云宗=Thanh Vân Tông" spellcheck="false"></textarea>
+            <div class="bulk-actions">
+                <button class="btn-secondary" onclick="loadRawText()">Tải lại gốc</button>
+                <button class="btn-primary" onclick="saveRawText()">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Toast -->
+<div id="toast" class="toast"></div>
+
+<script>
+    let dictionaryItems = []; // Danh sách gốc lưu { key, value }
+    let isEditMode = false;
+
+    // Khi load trang
+    window.addEventListener('DOMContentLoaded', () => {
+        loadDictionary();
+    });
+
+    // Hàm hiển thị Toast thông báo
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        toast.innerText = message;
+        toast.className = `toast show ${type}`;
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+
+    // Tải toàn bộ từ điển từ API
+    async function loadDictionary() {
+        try {
+            const res = await fetch('/api/names2');
+            if (!res.ok) throw new Error('Không thể tải từ điển.');
+            const data = await res.json();
+            dictionaryItems = data.list || [];
+            
+            // Cập nhật giao diện
+            renderList(dictionaryItems);
+            updateMeta(dictionaryItems.length);
+            
+            // Đưa vào textarea bulk
+            updateBulkTextarea();
+        } catch (err) {
+            showToast('Lỗi: ' + err.message, 'danger');
+        }
+    }
+
+    // Render danh sách từ khóa
+    function renderList(items) {
+        const container = document.getElementById('listContainer');
+        container.innerHTML = '';
+
+        if (items.length === 0) {
+            container.innerHTML = '<div class="empty-state">Không có từ khóa nào được tìm thấy.</div>';
+            return;
+        }
+
+        items.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'word-row';
+            row.id = `row-${btoa(encodeURIComponent(item.key))}`; // Tạo id an toàn để xóa
+            
+            row.innerHTML = `
+                <div class="word-content">
+                    <span class="word-chinese" title="${item.key}">${item.key}</span>
+                    <span class="word-arrow">➔</span>
+                    <span class="word-vietnamese" title="${item.value}">${item.value}</span>
+                </div>
+                <div class="actions">
+                    <button class="action-btn btn-edit" onclick="startEditMode('${escapeJsString(item.key)}', '${escapeJsString(item.value)}')">Sửa</button>
+                    <button class="action-btn btn-delete" onclick="deleteItem('${escapeJsString(item.key)}', this)">Xóa</button>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    function escapeJsString(str) {
+        return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
+    // Cập nhật hiển thị số lượng từ khóa
+    function updateMeta(count) {
+        document.getElementById('metaInfo').innerText = `Tổng cộng: ${count} từ khóa`;
+    }
+
+    // Đưa danh sách từ vào Bulk Textarea
+    function updateBulkTextarea() {
+        const text = dictionaryItems.map(item => `${item.key}=${item.value}`).join('\n');
+        document.getElementById('bulkTextarea').value = text;
+    }
+
+    // Lọc tìm kiếm trực tiếp trên Client
+    function handleSearch() {
+        const query = document.getElementById('searchBar').value.toLowerCase().trim();
+        if (!query) {
+            renderList(dictionaryItems);
+            updateMeta(dictionaryItems.length);
+            return;
+        }
+
+        const filtered = dictionaryItems.filter(item => 
+            item.key.toLowerCase().includes(query) || 
+            item.value.toLowerCase().includes(query)
+        );
+        renderList(filtered);
+        updateMeta(filtered.length);
+    }
+
+    // Chuyển Tab
+    function switchTab(tab) {
+        const tabCrudBtn = document.getElementById('tabCrudBtn');
+        const tabBulkBtn = document.getElementById('tabBulkBtn');
+        const tabCrud = document.getElementById('tabCrud');
+        const tabBulk = document.getElementById('tabBulk');
+
+        if (tab === 'crud') {
+            tabCrudBtn.classList.add('active');
+            tabBulkBtn.classList.remove('active');
+            tabCrud.style.display = 'flex';
+            tabBulk.style.display = 'none';
+            // Tải lại từ điển để đồng bộ nếu có chỉnh sửa raw bên tab kia
+            loadDictionary();
+        } else {
+            tabCrudBtn.classList.remove('active');
+            tabBulkBtn.classList.add('active');
+            tabCrud.style.display = 'none';
+            tabBulk.style.display = 'flex';
+            // Đảm bảo textarea đồng bộ
+            updateBulkTextarea();
+        }
+    }
+
+    // Thêm mới hoặc cập nhật từ
+    async function handleUpsert(event) {
+        event.preventDefault();
+        const key = document.getElementById('chineseKey').value.trim();
+        const value = document.getElementById('vietValue').value.trim();
+
+        if (!key || !value) return;
+
+        try {
+            const res = await fetch('/api/names2/upsert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key, value })
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Lỗi khi lưu.');
+            }
+
+            showToast(isEditMode ? 'Đã cập nhật từ khóa thành công!' : 'Đã thêm từ khóa mới thành công!', 'success');
+            
+            // Khôi phục form
+            cancelEditMode();
+            
+            // Tải lại danh sách từ server
+            await loadDictionary();
+            
+            // Xóa nội dung tìm kiếm
+            document.getElementById('searchBar').value = '';
+        } catch (err) {
+            showToast('Lỗi: ' + err.message, 'danger');
+        }
+    }
+
+    // Bật chế độ sửa nhanh
+    function startEditMode(key, value) {
+        isEditMode = true;
+        document.getElementById('chineseKey').value = key;
+        document.getElementById('chineseKey').readOnly = true; // Không cho sửa key tiếng Trung khi đang update
+        document.getElementById('vietValue').value = value;
+        document.getElementById('vietValue').focus();
+        
+        document.getElementById('formTitle').innerText = 'Chỉnh sửa từ khóa';
+        document.getElementById('btnSubmitForm').innerText = 'Lưu thay đổi';
+        document.getElementById('btnCancelEdit').style.display = 'inline-block';
+        
+        // Cuộn lên form
+        document.getElementById('upsertForm').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Tắt chế độ sửa
+    function cancelEditMode() {
+        isEditMode = false;
+        document.getElementById('chineseKey').value = '';
+        document.getElementById('chineseKey').readOnly = false;
+        document.getElementById('vietValue').value = '';
+        
+        document.getElementById('formTitle').innerText = 'Thêm từ mới';
+        document.getElementById('btnSubmitForm').innerText = 'Thêm từ khóa';
+        document.getElementById('btnCancelEdit').style.display = 'none';
+    }
+
+    // Xóa nhanh một từ
+    async function deleteItem(key, btnElement) {
+        if (!confirm(`Bạn có chắc muốn xóa từ dịch của "${key}"?`)) return;
+
+        try {
+            const res = await fetch('/api/names2/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key })
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Lỗi khi xóa.');
+            }
+
+            // Tạo hiệu ứng mờ dần rồi xóa trên UI trước khi load lại
+            const row = btnElement.closest('.word-row');
+            if (row) {
+                row.style.opacity = '0';
+                row.style.transition = 'opacity 0.2s ease-out';
+                setTimeout(async () => {
+                    await loadDictionary();
+                    showToast('Đã xóa từ khóa thành công!', 'success');
+                }, 200);
+            } else {
+                await loadDictionary();
+                showToast('Đã xóa từ khóa thành công!', 'success');
+            }
+
+            // Nếu đang sửa đúng từ vừa xóa thì hủy mode edit
+            if (isEditMode && document.getElementById('chineseKey').value === key) {
+                cancelEditMode();
+            }
+        } catch (err) {
+            showToast('Lỗi: ' + err.message, 'danger');
+        }
+    }
+
+    // Xóa toàn bộ từ điển
+    async function clearAllDictionary() {
+        if (!confirm('CẢNH BÁO: Bạn có chắc chắn muốn XÓA SẠCH toàn bộ từ điển tùy chỉnh Names2? Hành động này không thể hoàn tác!')) return;
+
+        try {
+            const res = await fetch('/api/names2/clear', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (!res.ok) throw new Error('Không thể xóa sạch từ điển.');
+
+            showToast('Đã xóa sạch từ điển tùy chỉnh!', 'success');
+            cancelEditMode();
+            await loadDictionary();
+        } catch (err) {
+            showToast('Lỗi: ' + err.message, 'danger');
+        }
+    }
+
+    // Tải lại văn bản thô gốc
+    function loadRawText() {
+        updateBulkTextarea();
+        showToast('Đã khôi phục lại văn bản gốc.');
+    }
+
+    // Lưu văn bản thô
+    async function saveRawText() {
+        const content = document.getElementById('bulkTextarea').value;
+
+        try {
+            const res = await fetch('/api/names2/save-raw', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content })
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Lỗi khi lưu.');
+            }
+
+            const data = await res.json();
+            showToast(`Đã lưu thô và cập nhật thành công ${data.count} từ khóa!`, 'success');
+            
+            // Reload danh sách
+            await loadDictionary();
+        } catch (err) {
+            showToast('Lỗi: ' + err.message, 'danger');
+        }
+    }
+</script>
+</body>
+</html>
