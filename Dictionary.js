@@ -57,22 +57,23 @@ class Trie {
 // --- Punctuation map (build 1 lần) ---
 
 const PUNCT_MAP = {
-    '。': '. ', '，': ', ', '、': ', ', '；': '; ', '！': '! ', '？': '? ',
+    '。': '. ', '，': ', ', '、': ', ', '；': ';', '！': '!', '？': '?',
     '：': ': ', '（': '(', '）': ')', '〔': '[', '〕': ']',
-    '【': '[', '】': ']', '《': '"', '》': '"',
+    '【': '[', '】': ']', '《': '<', '》': '>',
     '｛': '{', '｝': '}', '『': '[', '』': ']',
-    '〈': '<', '〉': '>', '～': '~', '—': ' - ', '…': '...',
+    '〈': '<', '〉': '>', '～': '~', '—': '-', '…': '...',
     '〖': '[', '〗': ']', '〘': '[', '〙': ']', '〚': '[', '〛': ']',
-    '　': ' ', '\u201c': '"', '\u201d': '"', '\u2018': "'", '\u2019': "'"
+    '　': ' '
 };
 
 const PUNCT_REGEX = new RegExp(`[${Object.keys(PUNCT_MAP).join('')}]`, 'g');
 
 // --- PostProcess regex (build 1 lần, không re-compile mỗi call) ---
-const RE_SPACE_BEFORE_PUNCT = / +([,.?![\]>"':;])/g;
-const RE_SPACE_AFTER_OPEN   = /([<\["'(]) +/g;
-const RE_MULTI_SPACE        = / {2,}/g;
-const RE_CAPITALIZE         = /(^|[.!?]\s+)([a-z])/g;
+const RE_SPACE_BEFORE_PUNCT = / +([,.?!\]\>”’):])/g;
+const RE_SPACE_AFTER_OPEN   = /([<\[“‘(]) +/g;
+const RE_CAPITALIZE         = /(^\s*|[.!?“‘”’\[-]\s*)(\p{Ll})/gu;
+const RE_MULTI_SPACE        = / +/g;
+const RE_QUOTES             = /[“‘”’]/g;
 
 // --- Dictionary ---
 
@@ -287,11 +288,27 @@ class Dictionary {
     }
 
     _postProcess(text) {
-        return text
-            .replace(RE_SPACE_BEFORE_PUNCT, '$1')
-            .replace(RE_SPACE_AFTER_OPEN,   '$1')
+        if (!text) return '';
+        
+        // Tách văn bản thành các dòng và loại bỏ khoảng trắng đầu/cuối của từng dòng để bảo toàn cấu trúc xuống dòng
+        const lines = text.split('\n');
+        const trimmedLines = [];
+        for (let i = 0; i < lines.length; i++) {
+            trimmedLines.push(lines[i].trim());
+        }
+        let processed = trimmedLines.join('\n');
+
+        // Loại bỏ khoảng trắng thừa trước và sau dấu câu
+        processed = processed.replace(RE_SPACE_BEFORE_PUNCT, '$1');
+        processed = processed.replace(RE_SPACE_AFTER_OPEN,   '$1');
+        
+        // Viết hoa chữ cái đầu câu (hỗ trợ Unicode tiếng Việt có dấu)
+        processed = processed.replace(RE_CAPITALIZE, (_, p1, p2) => p1 + p2.toUpperCase());
+
+        // Chuyển đổi nháy cong thành nháy thẳng và thu gọn khoảng trắng kép
+        return processed
+            .replace(RE_QUOTES, '"')
             .replace(RE_MULTI_SPACE, ' ')
-            .replace(RE_CAPITALIZE, (_, p1, p2) => p1 + p2.toUpperCase())
             .trim();
     }
 }
