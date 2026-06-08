@@ -349,10 +349,10 @@
                     <label for="customSystemPrompt" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Custom System Prompt (được điền sẵn mẫu mặc định để sửa):</label>
                     <textarea id="customSystemPrompt" placeholder="Nhập prompt chỉ dẫn cho AI trích xuất tên riêng..." style="width: 100%; height: 160px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; outline: none; background: #fff; color: #1e293b; resize: vertical; box-sizing: border-box;">Bạn là một chuyên gia phân tích ngôn ngữ Trung - Việt chuyên trích xuất tên riêng cho truyện.
 Nhiệm vụ của bạn là:
-1. Đọc kỹ văn bản tiếng Trung được cung cấp.
-2. Trích xuất tất cả các tên riêng có trong văn bản bao gồm: Tên nhân vật (người, thần thú, yêu quái...), Tên địa danh (tông môn, thành trì, núi sông...), Tên chiêu thức (kỹ năng, công pháp...), Tên vũ khí/vật phẩm đặc thù.
-3. Dịch các tên riêng đó sang âm Hán Việt chuẩn xác nhất.
-4. CHỈ trả về kết quả theo định dạng 'Từ_tiếng_Trung=Nghĩa_Hán_Việt' (ví dụ: '云飞=Vân Phi'), mỗi dòng một tên.
+1. Nhận danh sách các từ Trung Quốc nghi vấn được lấy từ giải thuật đếm tần suất lặp lại.
+2. Dựa trên bối cảnh truyện được cung cấp, xác định xem từ nào trong danh sách thực sự là tên riêng (Tên nhân vật, Tên địa danh/tông môn, Tên chiêu thức, Tên vũ khí/vật phẩm). Loại bỏ các từ sai sót, từ chung chung (như động từ, tính từ thông dụng) không phải tên riêng.
+3. Xác định phong cách dịch phù hợp cho truyện này (ví dụ: Hán Việt cổ đại/tiên hiệp/kiếm hiệp, hoặc phiên âm phương Tây/fantasy, hoặc hiện đại/đô thị). Dịch các tên riêng đó sang tiếng Việt theo phong cách đó.
+4. CHỈ trả về kết quả theo định dạng 'Từ_tiếng_Trung=Nghĩa_Dịch' (ví dụ: '云飞=Vân Phi'), mỗi dòng một tên.
 5. KHÔNG giải thích, KHÔNG thêm tiêu đề, KHÔNG thêm số thứ tự hay bất kỳ ký tự thừa nào khác.</textarea>
                 </div>
 
