@@ -186,6 +186,19 @@
     </div>
 </div>
 
+<!-- Last Book Section -->
+<div id="lastBookSection" style="display: none; background: #ffffff; padding: 16px 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+    <h2 style="font-size: 1.1rem; margin-bottom: 12px; color: #0f172a; font-weight: 700; border-left: 4px solid #10b981; padding-left: 10px;">Truyện đang đọc/tải gần đây</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="flex: 1; min-width: 200px;">
+            <a id="lastBookLink" href="#" style="font-size: 1.05rem; font-weight: 600; color: #2563eb; text-decoration: none; display: inline-block;"></a>
+            <div id="lastBookAuthor" style="font-size: 0.85rem; color: #64748b; margin-top: 2px; font-weight: 500;"></div>
+            <div id="lastBookChaptersInfo" style="font-size: 0.85rem; color: #475569; margin-top: 6px;"></div>
+        </div>
+        <a id="lastBookActionBtn" href="#" style="background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.88rem; font-weight: 600; padding: 8px 16px; text-decoration: none; transition: background 0.2s; display: inline-flex; align-items: center; justify-content: center; height: 38px;">Tiếp tục</a>
+    </div>
+</div>
+
 <!-- Book List Section -->
 <div class="book-list-section">
     <h2>Truyện mới cập nhật (Thể loại: {{categoryName}})</h2>
@@ -394,6 +407,65 @@ function toggleManualTool() {
         arrow.innerText = '▶';
     }
 }
+
+// Kiểm tra và hiển thị truyện đang đọc/tải gần đây
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const lastBookRaw = localStorage.getItem('last_book');
+        if (lastBookRaw) {
+            const lastBook = JSON.parse(lastBookRaw);
+            if (lastBook && lastBook.id && lastBook.title) {
+                const section = document.getElementById('lastBookSection');
+                const link = document.getElementById('lastBookLink');
+                const author = document.getElementById('lastBookAuthor');
+                const info = document.getElementById('lastBookChaptersInfo');
+                const btn = document.getElementById('lastBookActionBtn');
+                
+                if (section && link && author && info && btn) {
+                    const bookUrl = `/book/${lastBook.id}`;
+                    link.href = bookUrl;
+                    link.innerText = lastBook.title;
+                    author.innerText = `Tác giả: ${lastBook.author || 'Không rõ'}`;
+                    
+                    // Kiểm tra lịch sử đọc để hiển thị chương đang đọc dở
+                    let readInfoText = '';
+                    const history = JSON.parse(localStorage.getItem('read_history') || '{}');
+                    if (history[lastBook.id] && history[lastBook.id].title) {
+                        readInfoText = `Đang đọc dở: ${history[lastBook.id].title}`;
+                        btn.href = history[lastBook.id].url;
+                    } else {
+                        btn.href = bookUrl;
+                    }
+                    
+                    // Thêm thông tin cài đặt khoảng chương
+                    let rangeText = '';
+                    if (lastBook.startChapter && lastBook.endChapter) {
+                        rangeText = `Cài đặt tải gần nhất: Từ chương ${lastBook.startChapter} đến ${lastBook.endChapter}`;
+                        if (lastBook.totalChapters) {
+                            rangeText += ` (Tổng số: ${lastBook.totalChapters} chương)`;
+                        }
+                    } else if (lastBook.totalChapters) {
+                        rangeText = `Tổng số chương: ${lastBook.totalChapters}`;
+                    }
+                    
+                    if (readInfoText && rangeText) {
+                        info.innerHTML = `<span style="display:block; margin-bottom:4px; font-weight: 600; color: #0d9488;">${readInfoText}</span><span style="color: #64748b; font-size:0.82rem;">${rangeText}</span>`;
+                    } else if (readInfoText) {
+                        info.innerHTML = `<span style="display:block; font-weight: 600; color: #0d9488;">${readInfoText}</span>`;
+                    } else if (rangeText) {
+                        info.innerText = rangeText;
+                    } else {
+                        info.innerText = 'Chưa bắt đầu đọc';
+                    }
+                    
+                    section.style.display = 'block';
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Lỗi khi hiển thị truyện gần đây nhất:', e);
+    }
+});
 </script>
 </body>
 </html>

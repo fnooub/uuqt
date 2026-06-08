@@ -455,7 +455,26 @@ Nhiệm vụ của bạn là:
                 
                 startInput.max = count;
                 endInput.max = count;
-                endInput.value = count;
+
+                // Khôi phục cài đặt chương đã lưu
+                let savedStart = 1;
+                let savedEnd = count;
+                try {
+                    const settings = JSON.parse(localStorage.getItem('book_settings_' + '{{bookId}}') || 'null');
+                    if (settings) {
+                        if (settings.startChapter && settings.startChapter >= 1 && settings.startChapter <= count) {
+                            savedStart = settings.startChapter;
+                        }
+                        if (settings.endChapter && settings.endChapter >= savedStart && settings.endChapter <= count) {
+                            savedEnd = settings.endChapter;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Lỗi khôi phục cài đặt chương:', e);
+                }
+                
+                startInput.value = savedStart;
+                endInput.value = savedEnd;
             } else {
                 panel.style.display = 'none';
             }
@@ -960,9 +979,87 @@ Nhiệm vụ của bạn là:
             }
         }
         
-        // Lưu lịch sử đọc truyện
+        // Hàm lưu cấu hình chương
+        function saveBookSettings() {
+            const startInput = document.getElementById('startChapter');
+            const endInput = document.getElementById('endChapter');
+            const totalText = document.getElementById('totalChaptersText');
+            
+            if (!startInput || !endInput) return;
+            
+            const startVal = parseInt(startInput.value, 10);
+            const endVal = parseInt(endInput.value, 10);
+            const totalVal = totalText ? parseInt(totalText.innerText, 10) : 0;
+            
+            if (isNaN(startVal) || isNaN(endVal)) return;
+            
+            try {
+                const settings = {
+                    startChapter: startVal,
+                    endChapter: endVal,
+                    totalChapters: totalVal
+                };
+                localStorage.setItem('book_settings_' + '{{bookId}}', JSON.stringify(settings));
+                
+                // Cập nhật lại last_book nếu đang mở bộ truyện này
+                const lastBookRaw = localStorage.getItem('last_book');
+                if (lastBookRaw) {
+                    const lastBook = JSON.parse(lastBookRaw);
+                    if (lastBook && lastBook.id === '{{bookId}}') {
+                        lastBook.startChapter = startVal;
+                        lastBook.endChapter = endVal;
+                        lastBook.totalChapters = totalVal;
+                        localStorage.setItem('last_book', JSON.stringify(lastBook));
+                    }
+                }
+            } catch (e) {
+                console.error('Lỗi khi lưu cài đặt chương:', e);
+            }
+        }
+
+        // Đăng ký sự kiện thay đổi ô nhập chương
+        try {
+            document.getElementById('startChapter').addEventListener('input', saveBookSettings);
+            document.getElementById('endChapter').addEventListener('input', saveBookSettings);
+        } catch(e) {
+            console.error('Lỗi khi đăng ký sự kiện cho ô nhập chương:', e);
+        }
+
+        // Lưu lịch sử đọc truyện và đánh dấu last_book
         try {
             const currentBookId = '{{bookId}}';
+            const bookTitle = document.querySelector('.book-title').innerText.trim();
+            const bookAuthor = document.querySelector('.book-author').innerText.trim().replace('Tác giả:', '').trim();
+            const totalChapters = document.querySelectorAll('.chapter-item').length;
+
+            // Đọc cài đặt đã lưu
+            let startChapter = 1;
+            let endChapter = totalChapters || 1;
+            const settings = JSON.parse(localStorage.getItem('book_settings_' + currentBookId) || 'null');
+            if (settings) {
+                startChapter = settings.startChapter || 1;
+                endChapter = settings.endChapter || totalChapters || 1;
+            } else {
+                // Lưu cài đặt mặc định ban đầu
+                localStorage.setItem('book_settings_' + currentBookId, JSON.stringify({
+                    startChapter,
+                    endChapter,
+                    totalChapters
+                }));
+            }
+
+            // Đánh dấu làm last_book
+            const lastBook = {
+                id: currentBookId,
+                title: bookTitle,
+                author: bookAuthor,
+                startChapter,
+                endChapter,
+                totalChapters
+            };
+            localStorage.setItem('last_book', JSON.stringify(lastBook));
+
+            // Hiển thị nút đọc tiếp
             const history = JSON.parse(localStorage.getItem('read_history') || '{}');
             if (history[currentBookId]) {
                 const lastChapterUrl = history[currentBookId].url;
@@ -992,7 +1089,7 @@ Nhiệm vụ của bạn là:
                 }
             }
         } catch(e) {
-            console.error('LocalStorage history failed:', e);
+            console.error('LocalStorage history & last_book registration failed:', e);
         }
     </script>
 </body>
