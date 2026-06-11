@@ -26,80 +26,8 @@ function fetchHtmlWithCurl(url) {
     });
 }
 
-// Bộ từ dừng tiếng Trung thông dụng để lọc nhiễu các cụm từ không phải tên riêng
-const CHINESE_STOPWORDS = new Set([
-    '的', '了', '着', '著', '是', '有', '在', '他', '她', '它', '们', '这', '那', '个',
-    '一', '不', '就', '和', '而', '也', '得', '过', '里', '上', '下', '去', '来', '到',
-    '说', '道', '出', '看', '听', '写', '读', '吃', '走', '跑', '想', '要', '给', '对',
-    '把', '被', '让', '使', '以', '由', '自', '从', '往', '向', '朝', '用', '为', '跟',
-    '同', '与', '及', '或', '但', '因', '所', '如', '若', '如果', '虽然', 'si', 'si',
-    '虽然', '但是', 'because', 'so', 'then', 'because', 'so', 'then',
-    '因为', 'so', 'so', 'so', 'so', 'so', 'so', 'so', 'so', 'so',
-    '所以', '那么', '什么', '怎么', '哪里', '哪个', '那些', '这里', '这么', 'these', 'those',
-    '这样', 'base', 'base', 'base', 'base', 'base', 'base', 'base', 'base',
-    '这样', '那样', '为了', '关于', '对于', '或者', '而且', '并且', '然后', '因此',
-    '一个', 'base', 'base', 'base', 'base', 'base', 'base', 'base', 'base',
-    '一个', 'base', 'base', 'base', 'base', 'base', 'base', 'base', 'base',
-    '一个', '没有', '这个', '那个', '现在', '知道', '开始', '已经', '自己', 'we', 'we',
-    '我们', '你们', '他们', '她们', '它们', '可以', '觉得', '出来', '过去', '过来',
-    '起来', '感觉', '甚至', '没有什么', '什么时候', '什么样', '不知', '不知道'
-]);
 
-function countRepeatWords(text, minWordLength = 2, maxWordLength = 8, minFrequency = 2, limit = 100) {
-    if (!text) return [];
-    text = text.trim();
 
-    // Tách các dấu câu, khoảng trắng, dòng mới để phân đoạn văn bản
-    const regex = /[\p{P}\n\t\r]/ug;
-    const segments = text.split(regex).map(item => item.trim()).filter(Boolean);
-
-    const uniqueWords = new Set();
-    for (const segment of segments) {
-        for (let j = 0; j < segment.length; j++) {
-            for (let k = minWordLength; k <= maxWordLength; k++) {
-                if (j + k > segment.length) continue;
-                const word = segment.slice(j, j + k).trim();
-
-                // Chỉ giữ lại các cụm từ chứa toàn chữ Hán
-                if (!/^[\u4e00-\u9fa5]+$/.test(word)) continue;
-
-                // Bỏ qua nếu thuộc bộ từ dừng thông dụng
-                if (CHINESE_STOPWORDS.has(word)) continue;
-
-                if (word.length >= minWordLength) {
-                    uniqueWords.add(word);
-                }
-            }
-        }
-    }
-
-    const uniqueWordsArray = Array.from(uniqueWords);
-    const result = [];
-
-    for (const word of uniqueWordsArray) {
-        // Đếm tần suất xuất hiện trong văn bản gốc bằng split
-        const frequency = text.split(word).length - 1;
-        if (frequency >= minFrequency) {
-            result.push({ word, freq: frequency });
-        }
-    }
-
-    // Sắp xếp theo tần suất giảm dần, nếu tần suất bằng nhau thì ưu tiên từ dài hơn
-    result.sort((a, b) => b.freq - a.freq || b.word.length - a.word.length);
-    return result.slice(0, limit);
-}
-
-function mergeArrays(array1, array2) {
-    const frequencyMap = new Map();
-    const updateFrequency = (word, freq) => {
-        frequencyMap.set(word, (frequencyMap.get(word) || 0) + freq);
-    };
-
-    array1.forEach(item => updateFrequency(item.word, item.freq));
-    array2.forEach(item => updateFrequency(item.word, item.freq));
-
-    return Array.from(frequencyMap.entries()).map(([word, freq]) => ({ word, freq }));
-}
 
 // --- App ---
 const app = express();
@@ -206,9 +134,9 @@ app.get('/book/:bookId', async (req, res) => {
         const html = await fetchHtmlWithCurl(url);
         const $ = cheerio.load(html);
         
-        const titleRaw = $('h1.booktitle').text().replace(/[\r\n]+/g, ' ').trim() || 'Không rõ tiêu đề';
-        const authorRaw = ($('.bookinfo .booktag a.red').first().text().trim() || $('.bookinfo .booktag a').first().text().trim() || 'Tác giả ẩn danh').replace(/[\r\n]+/g, ' ');
-        const introRaw = ($('p.bookintro').text().trim() || 'Không có giới thiệu.').replace(/[\r\n]+/g, ' ');
+        const titleRaw = sify($('h1.booktitle').text().replace(/[\r\n]+/g, ' ').trim() || 'Không rõ tiêu đề');
+        const authorRaw = sify(($('.bookinfo .booktag a.red').first().text().trim() || $('.bookinfo .booktag a').first().text().trim() || 'Tác giả ẩn danh').replace(/[\r\n]+/g, ' '));
+        const introRaw = sify(($('p.bookintro').text().trim() || 'Không có giới thiệu.').replace(/[\r\n]+/g, ' '));
         
         const chapterList = [];
         const chapterLinks = $('#list-chapterAll dd a, .chapterlist dd a');
@@ -232,7 +160,7 @@ app.get('/book/:bookId', async (req, res) => {
         
         let chaptersHtml = '';
         if (chapterList.length > 0) {
-            const chapterTitles = chapterList.map(c => c.originalTitle);
+            const chapterTitles = chapterList.map(c => sify(c.originalTitle));
             console.log(`Đang dịch danh sách chương truyện ${bookId} (Tổng cộng ${chapterTitles.length} chương)...`);
             const translatedJoined = dictionary.translate(chapterTitles.join('\n'));
             const translatedItems = translatedJoined.split('\n');
@@ -360,9 +288,12 @@ app.get('/book/:bookId/download', async (req, res) => {
                 .map(p => cheerio.load(p).text().replace(/&nbsp;/g, ' ').replace(/[\r\n\t]+/g, ' ').trim())
                 .filter(p => p.length > 0 && !p.includes('uu看书') && !p.includes('uukanshu'));
 
+            const chapTitleSimp = sify(chapTitleRaw);
+            const rawParagraphsSimp = rawParagraphs.map(p => sify(p));
+
             // Dịch tiêu đề chương và nội dung chương
-            const translatedTitle = dictionary.translate(chapTitleRaw);
-            const joinedText = rawParagraphs.join('\n');
+            const translatedTitle = dictionary.translate(chapTitleSimp);
+            const joinedText = rawParagraphsSimp.join('\n');
             const translatedContent = dictionary.translate(joinedText);
 
             // Ghi nội dung chương đã dịch vào file
@@ -409,16 +340,24 @@ app.get('/api/book/:bookId/:chapterId', async (req, res) => {
             .map(p => cheerio.load(p).text().replace(/&nbsp;/g, ' ').replace(/[\r\n\t]+/g, ' ').trim())
             .filter(p => p.length > 0 && !p.includes('uu看书') && !p.includes('uukanshu'));
             
-        const textsToTranslate = [titleRaw, ...paragraphs];
+        const titleRawSimp = sify(titleRaw);
+        const paragraphsSimp = paragraphs.map(p => sify(p));
+
+        const textsToTranslate = [titleRawSimp, ...paragraphsSimp];
         const joinedText = textsToTranslate.join('\n');
         
         const translatedJoined = dictionary.translate(joinedText);
         const translatedItems = translatedJoined.split('\n');
         
-        const title = translatedItems[0] ? translatedItems[0].trim() : titleRaw;
+        const title = translatedItems[0] ? translatedItems[0].trim() : titleRawSimp;
         const content = translatedItems.slice(1).map(p => p.trim()).filter(p => p.length > 0).join('\n\n');
         
-        res.json({ title, content });
+        res.json({ 
+            title, 
+            content, 
+            titleRaw: titleRawSimp, 
+            contentRaw: paragraphsSimp.join('\n') 
+        });
         
     } catch (e) {
         console.error(`Lỗi tải JSON chương ${chapterId}:`, e);
@@ -426,19 +365,37 @@ app.get('/api/book/:bookId/:chapterId', async (req, res) => {
     }
 });
 
-// API quét và trích xuất tên riêng từ nhiều chương truyện tuần tự bằng AI
-app.post('/api/extract-names-multi', rateLimit, async (req, res) => {
-    const { bookId, startChapter, endChapter, apiKey, model, apiType, endpointUrl, customSystemPrompt } = req.body ?? {};
-    
-    if (!/^\d+$/.test(bookId)) {
-        return res.status(400).json({ error: 'ID truyện không hợp lệ.' });
+
+// API tra cứu nhanh nghĩa và phiên âm Hán Việt cho danh sách từ Trung Quốc
+app.post('/api/dict-lookup', (req, res) => {
+    const { words } = req.body ?? {};
+    if (!Array.isArray(words)) {
+        return res.status(400).json({ error: 'words phải là một mảng.' });
     }
     
-    const startNum = parseInt(startChapter, 10);
-    const endNum = parseInt(endChapter, 10);
+    try {
+        const results = words.map(w => {
+            const match = dictionary.trie.longestMatch(w, 0);
+            let meaning = '';
+            if (match && match.end === w.length - 1) {
+                meaning = match.translation.split('/')[0];
+            }
+            const hanviet = w.split('').map(char => dictionary.phienAmMap.get(char) || char).join(' ');
+            return { word: w, meaning, hanviet };
+        });
+        res.json({ results });
+    } catch (err) {
+        console.error('Lỗi khi tra từ điển nhanh:', err);
+        res.status(500).json({ error: 'Lỗi server khi tra từ điển.' });
+    }
+});
+
+// API gửi danh sách từ đã chọn sang AI để dịch nghĩa tên riêng chuẩn xác
+app.post('/api/translate-selected-names-ai', rateLimit, async (req, res) => {
+    const { words, apiKey, model, apiType, endpointUrl, customSystemPrompt, contextExcerpt, translateAll } = req.body ?? {};
     
-    if (isNaN(startNum) || isNaN(endNum) || startNum < 1 || endNum < startNum) {
-        return res.status(400).json({ error: 'Khoảng chương không hợp lệ.' });
+    if (!Array.isArray(words) || words.length === 0) {
+        return res.status(400).json({ error: 'words phải là một mảng không rỗng.' });
     }
     
     const finalApiType = apiType || 'openai';
@@ -447,137 +404,32 @@ app.post('/api/extract-names-multi', rateLimit, async (req, res) => {
     const finalEndpointUrl = endpointUrl || 'https://api.cometapi.com/v1/chat/completions';
     
     if (!finalApiKey) {
-        return res.status(400).json({ error: 'Thiếu API Key. Vui lòng cấu hình trong bảng điều khiển UI.' });
+        return res.status(400).json({ error: 'Thiếu API Key. Vui lòng cấu hình trên giao diện.' });
     }
     
-    try {
-        // 1. Tải danh sách chương
-        const url = `https://uukanshu.cc/book/${bookId}/`;
-        const html = await fetchHtmlWithCurl(url);
-        const $ = cheerio.load(html);
-        
-        const chapterList = [];
-        const chapterLinks = $('#list-chapterAll dd a, .chapterlist dd a');
-        chapterLinks.each((i, el) => {
-            const href = $(el).attr('href');
-            const title = $(el).text().trim();
-            if (href && title) {
-                const match = href.match(/\/book\/\d+\/(\d+)\.html/i);
-                if (match) {
-                    chapterList.push({
-                        chapterId: match[1],
-                        originalTitle: title
-                    });
-                }
-            }
-        });
-        
-        if (chapterList.length === 0) {
-            return res.status(404).json({ error: 'Không tìm thấy danh sách chương.' });
-        }
-        
-        // Giới hạn tối đa quét 30 chương một lần để tránh lạm dụng và quá tải
-        const countToScan = endNum - startNum + 1;
-        if (countToScan > 30) {
-            return res.status(400).json({ error: 'Chỉ hỗ trợ quét tối đa 30 chương một lúc.' });
-        }
-        
-        // Lọc các chương cần quét (1-indexed)
-        const targetChapters = chapterList.slice(startNum - 1, endNum);
-        if (targetChapters.length === 0) {
-            return res.status(400).json({ error: 'Không tìm thấy chương nào trong khoảng đã chọn.' });
-        }
-        
-        console.log(`[AI Scanner] Bắt đầu quét tên riêng từ chương ${startNum} đến ${endNum} của truyện ${bookId} bằng API ${finalApiType}...`);
-        
-        // 2. Tải và phân tích các chương để lọc từ lặp
-        let mergedCandidates = [];
-        let contextText = '';
-
-        console.log(`[AI Scanner] Bắt đầu tải và phân tích ${targetChapters.length} chương để trích xuất từ lặp...`);
-
-        for (let i = 0; i < targetChapters.length; i++) {
-            const chap = targetChapters[i];
-            const chapIdx = startNum + i;
-            console.log(`[AI Scanner] Đang tải chương ${chapIdx}/${endNum}: ${chap.originalTitle}`);
-            
-            try {
-                const chapUrl = `https://uukanshu.cc/book/${bookId}/${chap.chapterId}.html`;
-                const chapHtml = await fetchHtmlWithCurl(chapUrl);
-                const c$ = cheerio.load(chapHtml);
-                
-                const titleRaw = c$('h1.pt10').text().trim() || chap.originalTitle;
-                const contentEl = c$('div.readcotent');
-                contentEl.find('script').remove();
-                
-                const paragraphs = (contentEl.html() || '')
-                    .split(/<br\s*\/?>/i)
-                    .map(p => cheerio.load(p).text().replace(/&nbsp;/g, ' ').replace(/[\r\n\t]+/g, ' ').trim())
-                    .filter(p => p.length > 0 && !p.includes('uu看书') && !p.includes('uukanshu'));
-                
-                const rawText = [titleRaw, ...paragraphs].join('\n');
-                
-                // Thu thập bối cảnh (tối đa ~12000 ký tự đầu của truyện để tránh quá tải ngữ cảnh)
-                if (contextText.length < 12000) {
-                    contextText += rawText + '\n\n';
-                }
-                
-                // Đếm từ lặp cho chương này
-                const chapCandidates = countRepeatWords(rawText, 2, 8, 2, 100);
-                // Gộp vào danh sách tổng
-                mergedCandidates = mergeArrays(mergedCandidates, chapCandidates);
-                console.log(`   => Chương ${chapIdx}: Trích xuất ${chapCandidates.length} từ lặp cục bộ. Tổng số từ sau gộp: ${mergedCandidates.length}`);
-            } catch (err) {
-                console.error(`   => Lỗi khi tải chương ${chapIdx}: ${err.message}`);
-            }
-
-            // Tránh spam request dồn dập
-            if (i < targetChapters.length - 1) {
-                await new Promise(r => setTimeout(r, 800));
-            }
-        }
-
-        // Sắp xếp lại danh sách ứng viên đã gộp theo tần suất giảm dần
-        mergedCandidates.sort((a, b) => b.freq - a.freq || b.word.length - a.word.length);
-
-        // Lấy top 50 ứng viên nổi bật nhất
-        const topCandidates = mergedCandidates.slice(0, 50);
-
-        console.log(`[AI Scanner] Phân tích hoàn tất! Tổng cộng có ${mergedCandidates.length} ứng viên duy nhất.`);
-        console.log(`[AI Scanner] Đang lọc lấy top ${topCandidates.length} ứng viên nghi vấn nhất.`);
-        
-        if (topCandidates.length > 0) {
-            console.log(`[AI Scanner] Top 10 ứng viên lặp nhiều nhất:`);
-            topCandidates.slice(0, 10).forEach((c, idx) => {
-                console.log(`   [Top ${idx + 1}] Từ: "${c.word}" - Tần suất xuất hiện: ${c.freq} lần`);
-            });
-        } else {
-            console.log('[AI Scanner] Không tìm thấy từ lặp nghi vấn nào.');
-            return res.json({ names: '' });
-        }
-
-        // Định dạng danh sách gửi cho AI
-        const candidatesText = topCandidates.map((c, idx) => `${idx + 1}. ${c.word} (tần suất: ${c.freq})`).join('\n');
-
-        // Bối cảnh truyện (giới hạn 8000 ký tự đầu tiên để gửi cho AI)
-        const contextExcerpt = contextText.slice(0, 8000);
-
-        const systemPrompt = customSystemPrompt && customSystemPrompt.trim()
-            ? customSystemPrompt.trim()
-            : `Bạn là một chuyên gia phân tích ngôn ngữ Trung - Việt chuyên trích xuất tên riêng cho truyện.
+    const systemPrompt = customSystemPrompt && customSystemPrompt.trim()
+        ? customSystemPrompt.trim()
+        : (translateAll
+            ? `Bạn là một chuyên gia phân tích ngôn ngữ Trung - Việt chuyên dịch thuật cho truyện chữ Trung Quốc.
 Nhiệm vụ của bạn là:
-1. Nhận danh sách các từ Trung Quốc nghi vấn được lấy từ giải thuật đếm tần suất lặp lại.
-2. Dựa trên bối cảnh truyện được cung cấp, xác định xem từ nào trong danh sách thực sự là tên riêng (Tên nhân vật, Tên địa danh/tông môn, Tên chiêu thức, Tên vũ khí/vật phẩm). Loại bỏ các từ sai sót, từ chung chung (như động từ, tính từ thông dụng) không phải tên riêng.
-3. Xác định phong cách dịch phù hợp cho truyện này (ví dụ: Hán Việt cổ đại/tiên hiệp/kiếm hiệp, hoặc phiên âm phương Tây/fantasy, hoặc hiện đại/đô thị). Dịch các tên riêng đó sang tiếng Việt theo phong cách đó.
-4. CHỈ trả về kết quả theo định dạng 'Từ_tiếng_Trung=Nghĩa_Dịch' (ví dụ: '云飞=Vân Phi'), mỗi dòng một tên.
-5. KHÔNG giải thích, KHÔNG thêm tiêu đề, KHÔNG thêm số thứ tự hay bất kỳ ký tự thừa nào khác.`;
+1. Nhận danh sách các từ tiếng Trung được yêu cầu.
+2. Dựa trên bối cảnh truyện được cung cấp, dịch TẤT CẢ các từ tiếng Trung này sang nghĩa tiếng Việt phù hợp nhất (ưu tiên nghĩa Hán Việt hoặc nghĩa thuần Việt tự nhiên tùy thuộc vào ngữ cảnh).
+3. Bạn phải dịch và trả về bản dịch cho TOÀN BỘ danh sách từ được yêu cầu, không được bỏ sót bất kỳ từ nào.
+4. CHỈ trả về kết quả theo định dạng 'Từ_tiếng_Trung=Nghĩa_Dịch' (ví dụ: '云飞=Vân Phi'), mỗi dòng một từ.
+5. KHÔNG giải thích, KHÔNG thêm tiêu đề, KHÔNG thêm số thứ tự hay bất kỳ ký tự thừa nào khác.`
+            : `Bạn là một chuyên gia phân tích ngôn ngữ Trung - Việt chuyên dịch tên riêng cho truyện.
+Nhiệm vụ của bạn là:
+1. Nhận danh sách các từ tiếng Trung được yêu cầu.
+2. Dựa trên bối cảnh truyện được cung cấp, dịch các từ tiếng Trung đó sang tên riêng tiếng Việt phù hợp (ví dụ: Tên nhân vật, Tên địa danh/tông môn, Tên chiêu thức, Tên vũ khí/vật phẩm).
+3. CHỈ trả về kết quả theo định dạng 'Từ_tiếng_Trung=Nghĩa_Dịch' (ví dụ: '云飞=Vân Phi'), mỗi dòng một tên.
+4. KHÔNG giải thích, KHÔNG thêm tiêu đề, KHÔNG thêm số thứ tự hay bất kỳ ký tự thừa nào khác.`);
 
-        const userPrompt = `Bối cảnh truyện (đoạn trích):\n---\n${contextExcerpt}\n---\n\nDanh sách từ nghi vấn cần xác minh và dịch (hãy kiểm chứng từng từ một dựa trên bối cảnh ở trên, bỏ qua từ sai sót/không phải tên riêng, và dịch sang nghĩa tiếng Việt phù hợp):\n${candidatesText}`;
-
-        console.log(`[AI Scanner] Đang gửi yêu cầu xác minh và dịch sang AI (${finalApiType} - Model: ${finalModel})...`);
-
+    const userPrompt = translateAll
+        ? `Bối cảnh truyện (đoạn trích):\n---\n${contextExcerpt || ''}\n---\n\nDanh sách TOÀN BỘ từ tiếng Trung cần dịch:\n${words.map((w, idx) => `${idx + 1}. ${w}`).join('\n')}`
+        : `Bối cảnh truyện (đoạn trích):\n---\n${contextExcerpt || ''}\n---\n\nDanh sách từ tiếng Trung cần dịch sang tên riêng phù hợp:\n${words.map((w, idx) => `${idx + 1}. ${w}`).join('\n')}`;
+    
+    try {
         let resultText = '';
-
         if (finalApiType === 'gemini') {
             const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${finalModel}:generateContent?key=${finalApiKey}`;
             const response = await axios.post(geminiUrl, {
@@ -600,7 +452,6 @@ Nhiệm vụ của bạn là:
                 },
                 timeout: 60000
             });
-            
             resultText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
         } else {
             // OpenAI / CometAPI
@@ -618,45 +469,36 @@ Nhiệm vụ của bạn là:
                 },
                 timeout: 60000
             });
-            
             resultText = response.data?.choices?.[0]?.message?.content || '';
         }
-
-        console.log(`[AI Scanner] AI đã phản hồi thành công.`);
-        console.log(`[AI Scanner] Phản hồi thô của AI:\n---\n${resultText.trim()}\n---`);
-
-        // 3. Xử lý và làm sạch đầu ra từ AI
+        
+        // Dọn dẹp kết quả từ AI
         const nameMap = new Map();
         if (resultText) {
             const lines = resultText.split('\n');
             lines.forEach(line => {
                 const eqIdx = line.indexOf('=');
                 if (eqIdx <= 0) return;
-                
                 const rawKey = line.slice(0, eqIdx).trim();
                 const value = line.slice(eqIdx + 1).trim();
-                
                 if (rawKey && value) {
-                    const key = sify(rawKey); // Đồng bộ khóa thành chữ giản thể
+                    const key = sify(rawKey);
                     if (!nameMap.has(key)) {
                         nameMap.set(key, value);
                     }
                 }
             });
         }
-
-        // Kết xuất dữ liệu sang text key=value
+        
         let extractedText = '';
         for (const [k, v] of nameMap) {
             extractedText += `${k}=${v}\n`;
         }
         
-        console.log(`[AI Scanner] Hoàn thành quét! Tìm thấy tổng cộng ${nameMap.size} tên riêng hợp lệ sau khi AI xác minh.`);
         res.json({ names: extractedText.trim() });
-        
     } catch (err) {
-        console.error('[AI Scanner] Lỗi hệ thống:', err);
-        res.status(500).json({ error: 'Lỗi máy chủ khi quét tên riêng: ' + err.message });
+        console.error('[AI Name Translator] Lỗi:', err);
+        res.status(500).json({ error: 'Lỗi khi dịch tên bằng AI: ' + err.message });
     }
 });
 
