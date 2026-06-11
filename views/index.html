@@ -197,6 +197,7 @@
         </div>
         <a id="lastBookActionBtn" href="#" style="background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.88rem; font-weight: 600; padding: 8px 16px; text-decoration: none; transition: background 0.2s; display: inline-flex; align-items: center; justify-content: center; height: 38px;">Tiếp tục</a>
     </div>
+    <div id="lastBookReadHistoryPlaceholder"></div>
 </div>
 
 <!-- Book List Section -->
@@ -427,16 +428,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     link.innerText = lastBook.title;
                     author.innerText = `Tác giả: ${lastBook.author || 'Không rõ'}`;
                     
-                    // Kiểm tra lịch sử đọc để hiển thị chương đang đọc dở
-                    let readInfoText = '';
-                    const history = JSON.parse(localStorage.getItem('read_history') || '{}');
-                    if (history[lastBook.id] && history[lastBook.id].title) {
-                        readInfoText = `Đang đọc dở: ${history[lastBook.id].title}`;
-                        btn.href = history[lastBook.id].url;
-                    } else {
-                        btn.href = bookUrl;
-                    }
-                    
                     // Thêm thông tin cài đặt khoảng chương
                     let rangeText = '';
                     if (lastBook.startChapter && lastBook.endChapter) {
@@ -447,15 +438,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else if (lastBook.totalChapters) {
                         rangeText = `Tổng số chương: ${lastBook.totalChapters}`;
                     }
+                    info.innerText = rangeText || 'Chưa bắt đầu đọc';
                     
-                    if (readInfoText && rangeText) {
-                        info.innerHTML = `<span style="display:block; margin-bottom:4px; font-weight: 600; color: #0d9488;">${readInfoText}</span><span style="color: #64748b; font-size:0.82rem;">${rangeText}</span>`;
-                    } else if (readInfoText) {
-                        info.innerHTML = `<span style="display:block; font-weight: 600; color: #0d9488;">${readInfoText}</span>`;
-                    } else if (rangeText) {
-                        info.innerText = rangeText;
+                    // Kiểm tra lịch sử đọc để hiển thị chương đang đọc dở dạng banner đẹp mắt
+                    const history = JSON.parse(localStorage.getItem('read_history') || '{}');
+                    const historyPlaceholder = document.getElementById('lastBookReadHistoryPlaceholder');
+                    
+                    if (history[lastBook.id] && history[lastBook.id].title) {
+                        // Ẩn nút tiếp tục mặc định của thẻ thông tin
+                        btn.style.display = 'none';
+                        if (historyPlaceholder) {
+                            historyPlaceholder.innerHTML = `
+                                <div style="margin-top: 16px; padding: 12px; border-radius: 8px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <span style="color: #64748b">Bạn đang đọc dở:</span>
+                                        <strong style="display: block; color: #1e293b; margin-top: 2px;">${history[lastBook.id].title}</strong>
+                                    </div>
+                                    <a href="${history[lastBook.id].url}" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 6px 16px; border-radius: 6px; text-decoration: none; font-weight: 500; font-size: 0.85rem; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);">Đọc tiếp</a>
+                                </div>
+                            `;
+                        }
                     } else {
-                        info.innerText = 'Chưa bắt đầu đọc';
+                        // Hiện nút tiếp tục mặc định trỏ về trang chi tiết truyện
+                        btn.style.display = 'inline-flex';
+                        btn.href = bookUrl;
+                        if (historyPlaceholder) {
+                            historyPlaceholder.innerHTML = '';
+                        }
                     }
                     
                     section.style.display = 'block';

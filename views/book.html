@@ -254,10 +254,6 @@
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         Tải truyện (TXT)
                     </button>
-                    <button onclick="toggleAiPanel()" class="download-btn" style="margin-left: 4px; border: none; outline: none; cursor: pointer; background: #6366f1; border-color: #6366f1;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                        Quét tên riêng (AI)
-                    </button>
                     <a href="/names2" class="download-btn" style="margin-left: 4px; border: none; outline: none; cursor: pointer; background: #8b5cf6; border-color: #8b5cf6; text-decoration: none; display: inline-flex; align-items: center;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                         Quản lý Names2
@@ -301,6 +297,57 @@
                         Hủy tải
                     </button>
                 </div>
+                
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 5px; flex-wrap: wrap;">
+                    <input type="checkbox" id="scanNamesBeforeDownload" style="width: 16px; height: 16px; cursor: pointer;">
+                    <label for="scanNamesBeforeDownload" style="font-size: 0.88rem; font-weight: 600; color: var(--text-muted); cursor: pointer;">Quét & dịch Names2 trước khi tải</label>
+                    <button onclick="toggleAiConfigInDownload()" class="download-btn" style="margin-left: 10px; padding: 4px 10px; font-size: 0.78rem; background: #6366f1; border: none; cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                        ⚙️ Cấu hình AI
+                    </button>
+                </div>
+
+                <!-- Collapsible AI Panel inside Download Panel -->
+                <div id="aiConfigSection" style="display: none; border-top: 1px dashed #cbd5e1; padding-top: 15px; margin-top: 10px; flex-direction: column; gap: 15px;">
+                    <h3 style="font-size: 0.9rem; font-weight: 700; color: #6366f1;">Cấu hình AI quét tên riêng (CometAPI)</h3>
+                    
+                    <!-- API Credentials -->
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <div style="display: flex; flex-direction: column; gap: 4px; width: 180px;">
+                            <label for="aiApiType" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Loại API:</label>
+                            <select id="aiApiType" onchange="onApiTypeChange()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem; background: #fff; color: #1e293b;">
+                                <option value="openai">CometAPI / OpenAI / Khác</option>
+                                <option value="gemini">Gemini Direct API</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 200px;">
+                            <label id="apiKeyLabel" for="cometApiKey" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">API Key:</label>
+                            <input type="password" id="cometApiKey" placeholder="Nhập API Key của bạn..." style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem;">
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 4px; width: 180px;">
+                            <label for="cometModel" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Model ID:</label>
+                            <input type="text" id="cometModel" value="gemini-2.5-flash-lite" placeholder="gemini-2.5-flash-lite" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem;">
+                        </div>
+                    </div>
+
+                    <!-- Custom Endpoint URL -->
+                    <div id="endpointUrlContainer" style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="cometEndpoint" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Endpoint URL (chỉ cho OpenAI / Khác):</label>
+                        <input type="text" id="cometEndpoint" value="https://api.cometapi.com/v1/chat/completions" placeholder="https://api.cometapi.com/v1/chat/completions" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem; width: 100%; box-sizing: border-box;">
+                    </div>
+
+                    <!-- Custom System Prompts -->
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 280px;">
+                            <label for="customSystemPrompt" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Custom Prompt - Dịch Chỉ Tên Riêng (để trống dùng mặc định):</label>
+                            <textarea id="customSystemPrompt" placeholder="Nhập prompt chỉ dẫn cho AI trích xuất tên riêng..." style="width: 100%; height: 160px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; outline: none; background: #fff; color: #1e293b; resize: vertical; box-sizing: border-box;"></textarea>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 280px;">
+                            <label for="customSystemPromptAll" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Custom Prompt - Dịch Tất Cả (để trống dùng mặc định):</label>
+                            <textarea id="customSystemPromptAll" placeholder="Nhập prompt chỉ dẫn cho AI dịch toàn bộ từ..." style="width: 100%; height: 160px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; outline: none; background: #fff; color: #1e293b; resize: vertical; box-sizing: border-box;"></textarea>
+                        </div>
+                    </div>
+
+                </div>
 
                 <!-- Progress container -->
                 <div id="downloadProgressContainer" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
@@ -312,104 +359,57 @@
                         <div id="downloadProgressBar" style="width: 0%; height: 100%; background: #10b981; border-radius: 5px; transition: width 0.15s ease-out;"></div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- AI Names Scanner Panel -->
-        <div class="glass-card" id="aiPanel" style="display: none; transition: all 0.3s ease; border-color: #6366f1;">
-            <h2 class="intro-title" style="border-left: 4px solid #6366f1; padding-left: 10px; margin-bottom: 16px;">Tự động quét tên riêng bằng AI (CometAPI)</h2>
-            <div style="display: flex; flex-direction: column; gap: 15px;">
-                <!-- API Credentials -->
-                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                    <div style="display: flex; flex-direction: column; gap: 4px; width: 180px;">
-                        <label for="aiApiType" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Loại API:</label>
-                        <select id="aiApiType" onchange="onApiTypeChange()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem; background: #fff; color: #1e293b;">
-                            <option value="openai">CometAPI / OpenAI / Khác</option>
-                            <option value="gemini">Gemini Direct API</option>
-                        </select>
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 200px;">
-                        <label id="apiKeyLabel" for="cometApiKey" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">API Key:</label>
-                        <input type="password" id="cometApiKey" placeholder="Nhập API Key của bạn..." style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem;">
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 4px; width: 180px;">
-                        <label for="cometModel" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Model ID:</label>
-                        <input type="text" id="cometModel" value="gemini-2.5-flash-lite" placeholder="gemini-2.5-flash-lite" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem;">
-                    </div>
-                </div>
-
-                <!-- Custom Endpoint URL -->
-                <div id="endpointUrlContainer" style="display: flex; flex-direction: column; gap: 4px;">
-                    <label for="cometEndpoint" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Endpoint URL (chỉ cho OpenAI / Khác):</label>
-                    <input type="text" id="cometEndpoint" value="https://api.cometapi.com/v1/chat/completions" placeholder="https://api.cometapi.com/v1/chat/completions" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem; width: 100%; box-sizing: border-box;">
-                </div>
-
-                <!-- Custom System Prompt -->
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <label for="customSystemPrompt" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Custom System Prompt (được điền sẵn mẫu mặc định để sửa):</label>
-                    <textarea id="customSystemPrompt" placeholder="Nhập prompt chỉ dẫn cho AI trích xuất tên riêng..." style="width: 100%; height: 160px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; outline: none; background: #fff; color: #1e293b; resize: vertical; box-sizing: border-box;">Bạn là một chuyên gia phân tích ngôn ngữ Trung - Việt chuyên trích xuất tên riêng cho truyện.
-Nhiệm vụ của bạn là:
-1. Nhận danh sách các từ Trung Quốc nghi vấn được lấy từ giải thuật đếm tần suất lặp lại.
-2. Dựa trên bối cảnh truyện được cung cấp, xác định xem từ nào trong danh sách thực sự là tên riêng (Tên nhân vật, Tên địa danh/tông môn, Tên chiêu thức, Tên vũ khí/vật phẩm). Loại bỏ các từ sai sót, từ chung chung (như động từ, tính từ thông dụng) không phải tên riêng.
-3. Xác định phong cách dịch phù hợp cho truyện này (ví dụ: Hán Việt cổ đại/tiên hiệp/kiếm hiệp, hoặc phiên âm phương Tây/fantasy, hoặc hiện đại/đô thị). Dịch các tên riêng đó sang tiếng Việt theo phong cách đó.
-4. CHỈ trả về kết quả theo định dạng 'Từ_tiếng_Trung=Nghĩa_Dịch' (ví dụ: '云飞=Vân Phi'), mỗi dòng một tên.
-5. KHÔNG giải thích, KHÔNG thêm tiêu đề, KHÔNG thêm số thứ tự hay bất kỳ ký tự thừa nào khác.</textarea>
-                </div>
-
-                <!-- Range Control -->
-                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <label for="aiStartChapter" style="font-size: 0.9rem; color: var(--text-muted);">Từ chương:</label>
-                        <input type="number" id="aiStartChapter" value="1" min="1" style="width: 80px; padding: 8px 12px; border-radius: 6px; background: #ffffff; border: 1px solid #cbd5e1; color: var(--text-main); text-align: center; outline: none; font-weight: 600;">
+                <!-- Names2 Scan & Edit Workspace -->
+                <div id="names2Workspace" style="display: none; flex-direction: column; gap: 15px; margin-top: 15px; border-top: 1px dashed #cbd5e1; padding-top: 15px;">
+                    <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 5px;">Kết quả quét từ lặp (Top 100)</h3>
+                    
+                    <div style="max-height: 280px; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
+                            <thead>
+                                <tr style="background: #f8fafc; border-bottom: 1px solid #cbd5e1;">
+                                    <th style="padding: 8px 10px; width: 45px; text-align: center;">
+                                        <input type="checkbox" id="selectAllCandidates" onclick="toggleSelectAllCandidates(this)" style="cursor: pointer;" checked>
+                                    </th>
+                                    <th style="padding: 8px 10px; width: 60px;">Lặp</th>
+                                    <th style="padding: 8px 10px; width: 120px;">Từ gốc</th>
+                                    <th style="padding: 8px 10px; width: 150px;">Hán Việt</th>
+                                    <th style="padding: 8px 10px;">Nghĩa xem trước</th>
+                                </tr>
+                            </thead>
+                            <tbody id="candidatesTableBody">
+                                <!-- Điền động -->
+                            </tbody>
+                        </table>
                     </div>
                     
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <label for="aiEndChapter" style="font-size: 0.9rem; color: var(--text-muted);">Đến chương:</label>
-                        <input type="number" id="aiEndChapter" value="10" min="1" style="width: 80px; padding: 8px 12px; border-radius: 6px; background: #ffffff; border: 1px solid #cbd5e1; color: var(--text-main); text-align: center; outline: none; font-weight: 600;">
-                    </div>
-                    
-                    <span style="font-size: 0.85rem; color: var(--text-muted);">(Quét tối đa 30 chương)</span>
-                </div>
-                
-                <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 5px;">
-                    <button onclick="startAiScan()" id="aiScanBtn" class="download-btn" style="padding: 8px 16px; font-size: 0.85rem; background: #6366f1; border: none; cursor: pointer;">
-                        Bắt đầu quét bằng AI
-                    </button>
-                    <button onclick="cancelAiScan()" id="aiCancelBtn" class="download-btn" style="padding: 8px 16px; font-size: 0.85rem; background: #ef4444; border: none; display: none; cursor: pointer;">
-                        Hủy quét
-                    </button>
-                </div>
-
-                <!-- Scanning Progress -->
-                <div id="aiProgressContainer" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; align-items: center;">
-                        <span id="aiStatusText" style="color: var(--text-main); font-weight: 600;">Đang kết nối server...</span>
-                        <span id="aiPercentText" style="font-weight: 700; color: #6366f1;">Chờ xử lý</span>
-                    </div>
-                    <div style="width: 100%; height: 10px; background: #f1f5f9; border-radius: 5px; overflow: hidden; border: 1px solid #e2e8f0;">
-                        <div id="aiProgressBar" style="width: 0%; height: 100%; background: #6366f1; border-radius: 5px; transition: width 0.3s ease-out;"></div>
-                    </div>
-                </div>
-
-                <!-- Results Output -->
-                <div id="aiResultContainer" style="display: none; flex-direction: column; gap: 8px; margin-top: 10px;">
-                    <label for="aiResultTextarea" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Kết quả tên riêng tìm thấy (Key=Value):</label>
-                    <textarea id="aiResultTextarea" spellcheck="false" style="width: 100%; height: 180px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: monospace; font-size: 0.88rem; resize: vertical; outline: none; background: #fff; color: #1e293b;" placeholder="Kết quả sẽ hiển thị ở đây..."></textarea>
-                    
-                    <div style="display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap;">
-                        <button id="aiSaveBtn" onclick="saveAiResultsToServer()" class="download-btn" style="padding: 6px 12px; font-size: 0.8rem; background: #6366f1; border: none; cursor: pointer;">
-                            Lưu vào Names2 hệ thống
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <button onclick="translateSelectedNamesWithAi(false)" id="aiTranslateSelectedBtn" class="download-btn" style="padding: 8px 16px; font-size: 0.85rem; background: #6366f1; border: none; cursor: pointer;" title="Chỉ trích xuất và dịch các danh từ riêng như nhân vật, địa danh, môn phái, công pháp">
+                            Dịch AI (Chỉ Tên Riêng)
                         </button>
-                        <button id="aiCopyBtn" onclick="copyAiResults()" class="download-btn" style="padding: 6px 12px; font-size: 0.8rem; background: #10b981; border: none; cursor: pointer;">
-                            Sao chép kết quả
+                        <button onclick="translateSelectedNamesWithAi(true)" id="aiTranslateAllSelectedBtn" class="download-btn" style="padding: 8px 16px; font-size: 0.85rem; background: linear-gradient(135deg, #8b5cf6, #d946ef); border: none; cursor: pointer;" title="Dịch toàn bộ danh sách các từ đã chọn lọc, không bỏ sót từ nào">
+                            Dịch AI (Dịch Tất Cả)
                         </button>
-                        <button onclick="downloadAiResults()" class="download-btn" style="padding: 6px 12px; font-size: 0.8rem; background: #0ea5e9; border: none; cursor: pointer;">
-                            Tải file Names2.txt
+                        <span id="aiTranslateStatus" style="font-size: 0.85rem; color: var(--text-muted);"></span>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <label for="names2OutputEdit" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Chỉnh sửa bản dịch Names2 (định dạng Key=Value):</label>
+                        <textarea id="names2OutputEdit" spellcheck="false" style="width: 100%; height: 150px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: monospace; font-size: 0.88rem; resize: vertical; outline: none; background: #fff; color: #1e293b;" placeholder="Từ_Hán_Tự=Nghĩa_Việt..."></textarea>
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 5px;">
+                        <button onclick="compileAndDownloadTxt(false)" id="compileDirectBtn" class="download-btn" style="padding: 8px 16px; font-size: 0.85rem; background: #10b981; border: none; cursor: pointer;">
+                            Dịch & Tải File TXT
+                        </button>
+                        <button onclick="compileAndDownloadTxt(true)" id="compileAndSaveBtn" class="download-btn" style="padding: 8px 16px; font-size: 0.85rem; background: var(--accent); border: none; cursor: pointer;">
+                            Lưu Names2 Hệ thống & Tải File
                         </button>
                     </div>
                 </div>
             </div>
         </div>
+
 
         <!-- Chapters List Card -->
         <div class="glass-card">
@@ -515,6 +515,17 @@ Nhiệm vụ của bạn là:
             const chaptersToDownload = chapters.filter(c => c.num >= startNum && c.num <= endNum);
             const total = chaptersToDownload.length;
 
+            // Khởi tạo các biến toàn cục cho download và quét
+            window.downloadedRawChapters = null;
+            window.currentBookStartNum = startNum;
+            window.currentBookEndNum = endNum;
+            window.currentBookIsFull = isFull;
+            
+            // Ẩn/dọn dẹp panel workspace cũ
+            document.getElementById('names2Workspace').style.display = 'none';
+            document.getElementById('candidatesTableBody').innerHTML = '';
+            document.getElementById('names2OutputEdit').value = '';
+
             // Khởi tạo AbortController
             window.downloadAbortController = new AbortController();
             const signal = window.downloadAbortController.signal;
@@ -584,13 +595,17 @@ Nhiệm vụ của bạn là:
                     results[indexInSubset] = {
                         num: chap.num,
                         title: data.title,
-                        content: data.content
+                        content: data.content,
+                        titleRaw: data.titleRaw || chap.title,
+                        contentRaw: data.contentRaw || ''
                     };
                 } else {
                     results[indexInSubset] = {
                         num: chap.num,
                         title: `Chương ${chap.num}: ${chap.title}`,
-                        content: `[Lỗi tải nội dung chương này từ nguồn gốc do Cloudflare chặn]`
+                        content: `[Lỗi tải nội dung chương này từ nguồn gốc do Cloudflare chặn]`,
+                        titleRaw: chap.title,
+                        contentRaw: ''
                     };
                 }
                 
@@ -610,9 +625,10 @@ Nhiệm vụ của bạn là:
                     
                     const chap = tasks[i];
                     
-                    // Thêm khoảng trễ nghỉ 1.5 giây giữa mỗi chương để tránh spam request lên Cloudflare
+                    // Thêm khoảng trễ nghỉ ngẫu nhiên từ 1.5 đến 2 giây giữa mỗi chương để tránh spam request lên Cloudflare
                     if (i > 0) {
-                        await new Promise(r => setTimeout(r, 1500));
+                        const randomDelay = 1500 + Math.floor(Math.random() * 500);
+                        await new Promise(r => setTimeout(r, randomDelay));
                     }
                     
                     if (signal.aborted) break;
@@ -630,6 +646,28 @@ Nhiệm vụ của bạn là:
                 
                 if (signal.aborted) {
                     throw new Error('Người dùng đã hủy quá trình tải.');
+                }
+
+                // Lưu lại kết quả đã tải
+                window.downloadedRawChapters = results;
+
+                const scanChecked = document.getElementById('scanNamesBeforeDownload').checked;
+                if (scanChecked) {
+                    // Chuyển sang luồng Quét & dịch Names2
+                    statusText.innerText = 'Đang tiến hành quét từ lặp tiếng Trung...';
+                    await performNames2Scanning(results);
+                    statusText.innerText = 'Đã quét xong từ lặp. Vui lòng chọn từ cần dịch bằng AI.';
+                    
+                    // Khôi phục giao diện các nút bấm nhưng vẫn giữ trạng thái cho phép thao tác ở Workspace
+                    rangeBtn.disabled = false;
+                    fullBtn.disabled = false;
+                    cancelBtn.style.display = 'none';
+                    rangeBtn.style.opacity = '1';
+                    fullBtn.style.opacity = '1';
+                    rangeBtn.style.pointerEvents = 'auto';
+                    fullBtn.style.pointerEvents = 'auto';
+                    window.downloadAbortController = null;
+                    return; // Dừng lại ở đây, đợi user thao tác ở Workspace
                 }
 
                 // Ghép nội dung file
@@ -711,23 +749,10 @@ Nhiệm vụ của bạn là:
             }
         }
 
-        function toggleAiPanel() {
-            const panel = document.getElementById('aiPanel');
-            if (panel.style.display === 'none') {
-                panel.style.display = 'block';
-                
-                // Set default range values based on current chapters
-                const chapterItems = document.querySelectorAll('.chapter-item');
-                const count = chapterItems.length;
-                
-                const startInput = document.getElementById('aiStartChapter');
-                const endInput = document.getElementById('aiEndChapter');
-                
-                startInput.max = count;
-                endInput.max = count;
-                
-                startInput.value = 1;
-                endInput.value = Math.min(10, count);
+        function toggleAiConfigInDownload() {
+            const section = document.getElementById('aiConfigSection');
+            if (section.style.display === 'none') {
+                section.style.display = 'flex';
                 
                 // Load credentials from localStorage, fallback to defaults
                 const savedApiType = localStorage.getItem('ai_api_type') || 'openai';
@@ -736,248 +761,38 @@ Nhiệm vụ của bạn là:
                 document.getElementById('cometApiKey').value = localStorage.getItem('comet_api_key') || '';
                 document.getElementById('cometModel').value = localStorage.getItem('comet_model') || 'gemini-2.5-flash-lite';
                 document.getElementById('cometEndpoint').value = localStorage.getItem('comet_endpoint') || 'https://api.cometapi.com/v1/chat/completions';
+                
                 const savedPrompt = localStorage.getItem('custom_system_prompt');
                 if (savedPrompt !== null) {
                     document.getElementById('customSystemPrompt').value = savedPrompt;
+                } else {
+                    document.getElementById('customSystemPrompt').value = `Bạn là một chuyên gia phân tích ngôn ngữ Trung - Việt chuyên dịch tên riêng cho truyện.
+Nhiệm vụ của bạn là:
+1. Nhận danh sách các từ tiếng Trung được yêu cầu.
+2. Dựa trên bối cảnh truyện được cung cấp, dịch các từ tiếng Trung đó sang tên riêng tiếng Việt phù hợp (ví dụ: Tên nhân vật, Tên địa danh/tông môn, Tên chiêu thức, Tên vũ khí/vật phẩm).
+3. CHỈ trả về kết quả theo định dạng 'Từ_tiếng_Trung=Nghĩa_Dịch' (ví dụ: '云飞=Vân Phi'), mỗi dòng một tên.
+4. KHÔNG giải thích, KHÔNG thêm tiêu đề, KHÔNG thêm số thứ tự hay bất kỳ ký tự thừa nào khác.`;
+                }
+
+                const savedPromptAll = localStorage.getItem('custom_system_prompt_all');
+                if (savedPromptAll !== null) {
+                    document.getElementById('customSystemPromptAll').value = savedPromptAll;
+                } else {
+                    document.getElementById('customSystemPromptAll').value = `Bạn là một chuyên gia phân tích ngôn ngữ Trung - Việt chuyên dịch thuật cho truyện chữ Trung Quốc.
+Nhiệm vụ của bạn là:
+1. Nhận danh sách các từ tiếng Trung được yêu cầu.
+2. Dựa trên bối cảnh truyện được cung cấp, dịch TẤT CẢ các từ tiếng Trung này sang nghĩa tiếng Việt phù hợp nhất (ưu tiên nghĩa Hán Việt hoặc nghĩa thuần Việt tự nhiên tùy thuộc vào ngữ cảnh).
+3. Bạn phải dịch và trả về bản dịch cho TOÀN BỘ danh sách từ được yêu cầu, không được bỏ sót bất kỳ từ nào.
+4. CHỈ trả về kết quả theo định dạng 'Từ_tiếng_Trung=Nghĩa_Dịch' (ví dụ: '云飞=Vân Phi'), mỗi dòng một từ.
+5. KHÔNG giải thích, KHÔNG thêm tiêu đề, KHÔNG thêm số thứ tự hay bất kỳ ký tự thừa nào khác.`;
                 }
                 
                 onApiTypeChange();
             } else {
-                panel.style.display = 'none';
+                section.style.display = 'none';
             }
         }
 
-        let aiScanAbortController = null;
-        let progressInterval = null;
-
-        async function startAiScan() {
-            const bookId = '{{bookId}}';
-            const apiType = document.getElementById('aiApiType').value;
-            const apiKey = document.getElementById('cometApiKey').value.trim();
-            const model = document.getElementById('cometModel').value.trim();
-            const endpointUrl = document.getElementById('cometEndpoint').value.trim();
-            const startNum = parseInt(document.getElementById('aiStartChapter').value, 10);
-            const endNum = parseInt(document.getElementById('aiEndChapter').value, 10);
-            
-            const chapterItems = document.querySelectorAll('.chapter-item');
-            const totalChaps = chapterItems.length;
-
-            if (!apiKey) {
-                alert('Vui lòng điền API Key!');
-                return;
-            }
-            if (isNaN(startNum) || isNaN(endNum) || startNum < 1 || endNum < startNum || endNum > totalChaps) {
-                alert('Khoảng chương không hợp lệ! Vui lòng chọn trong khoảng từ 1 đến ' + totalChaps);
-                return;
-            }
-            if (endNum - startNum + 1 > 30) {
-                alert('Để tối ưu chi phí và tránh lỗi thời gian chờ, bạn chỉ nên quét tối đa 30 chương mỗi lần!');
-                return;
-            }
-
-            const customSystemPrompt = document.getElementById('customSystemPrompt').value.trim();
-
-            // Save credentials
-            localStorage.setItem('ai_api_type', apiType);
-            localStorage.setItem('comet_api_key', apiKey);
-            localStorage.setItem('comet_model', model);
-            localStorage.setItem('comet_endpoint', endpointUrl);
-            localStorage.setItem('custom_system_prompt', customSystemPrompt);
-
-            // UI states
-            const scanBtn = document.getElementById('aiScanBtn');
-            const cancelBtn = document.getElementById('aiCancelBtn');
-            const progressContainer = document.getElementById('aiProgressContainer');
-            const progressBar = document.getElementById('aiProgressBar');
-            const percentText = document.getElementById('aiPercentText');
-            const statusText = document.getElementById('aiStatusText');
-            const resultContainer = document.getElementById('aiResultContainer');
-            const resultTextarea = document.getElementById('aiResultTextarea');
-
-            scanBtn.disabled = true;
-            scanBtn.style.opacity = '0.5';
-            scanBtn.style.pointerEvents = 'none';
-            cancelBtn.style.display = 'inline-block';
-            
-            progressContainer.style.display = 'flex';
-            progressBar.style.width = '0%';
-            percentText.innerText = '0%';
-            statusText.innerText = 'Đang tải danh sách chương & chuẩn bị nội dung...';
-            
-            resultContainer.style.display = 'none';
-            resultTextarea.value = '';
-
-            aiScanAbortController = new AbortController();
-            const signal = aiScanAbortController.signal;
-
-            // Animate fake progress to give user visual feedback during wait
-            let progress = 0;
-            progressBar.style.transition = 'width 0.3s ease-out';
-            
-            progressInterval = setInterval(() => {
-                if (progress < 90) {
-                    progress += Math.floor(Math.random() * 5) + 2;
-                    if (progress > 90) progress = 90;
-                    progressBar.style.width = `${progress}%`;
-                    percentText.innerText = `${progress}%`;
-                    if (progress < 25) {
-                        statusText.innerText = 'Đang tải dữ liệu chương truyện...';
-                    } else if (progress < 60) {
-                        statusText.innerText = `Đang gửi dữ liệu đến ${apiType === 'gemini' ? 'Gemini Direct API' : 'CometAPI'}...`;
-                    } else {
-                        statusText.innerText = 'AI đang phân tích & trích xuất tên riêng từng chương...';
-                    }
-                }
-            }, 800);
-
-            try {
-                const response = await fetch('/api/extract-names-multi', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        bookId,
-                        startChapter: startNum,
-                        endChapter: endNum,
-                        apiKey,
-                        model,
-                        apiType,
-                        endpointUrl,
-                        customSystemPrompt
-                    }),
-                    signal
-                });
-
-                const data = await response.json();
-                clearInterval(progressInterval);
-
-                if (!response.ok) {
-                    throw new Error(data.error || 'Lỗi server khi quét.');
-                }
-
-                progressBar.style.width = '100%';
-                percentText.innerText = '100%';
-                statusText.innerText = 'Đã hoàn tất quét!';
-
-                if (data.names) {
-                    resultTextarea.value = data.names;
-                    resultContainer.style.display = 'flex';
-                } else {
-                    resultTextarea.value = '';
-                    alert('Không tìm thấy tên riêng nào mới hoặc nội dung chương không có tên riêng.');
-                }
-            } catch (err) {
-                clearInterval(progressInterval);
-                console.error(err);
-                if (signal.aborted) {
-                    statusText.innerText = 'Đã hủy quét tên bằng AI.';
-                    percentText.innerText = 'Đã hủy';
-                    progressBar.style.width = '0%';
-                } else {
-                    statusText.innerText = `Lỗi: ${err.message}`;
-                    percentText.innerText = 'Thất bại';
-                    progressBar.style.width = '0%';
-                }
-            } finally {
-                scanBtn.disabled = false;
-                scanBtn.style.opacity = '1';
-                scanBtn.style.pointerEvents = 'auto';
-                cancelBtn.style.display = 'none';
-                aiScanAbortController = null;
-            }
-        }
-
-        function cancelAiScan() {
-            if (aiScanAbortController) {
-                aiScanAbortController.abort();
-            }
-        }
-
-        function copyAiResults() {
-            const textarea = document.getElementById('aiResultTextarea');
-            textarea.select();
-            document.execCommand('copy');
-            
-            const btn = document.getElementById('aiCopyBtn');
-            const originalText = btn.innerText;
-            btn.innerText = 'Đã sao chép!';
-            btn.style.background = '#059669';
-            
-            setTimeout(() => {
-                btn.innerText = originalText;
-                btn.style.background = '#10b981';
-            }, 2000);
-        }
-
-        function downloadAiResults() {
-            const text = document.getElementById('aiResultTextarea').value;
-            if (!text) return;
-
-            const bookTitle = document.querySelector('.book-title').innerText.trim();
-            const sanitizedTitle = bookTitle.replace(/[\\/:*?"<>|\r\n\t]/g, '').trim();
-            
-            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Names2_${sanitizedTitle}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            
-            setTimeout(() => {
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }, 1500);
-        }
-
-        async function saveAiResultsToServer() {
-            const text = document.getElementById('aiResultTextarea').value.trim();
-            if (!text) {
-                alert('Khung kết quả đang trống, không có gì để lưu!');
-                return;
-            }
-
-            const btn = document.getElementById('aiSaveBtn');
-            const originalText = btn.innerText;
-            btn.disabled = true;
-            btn.innerText = 'Đang lưu...';
-            btn.style.opacity = '0.7';
-
-            try {
-                const response = await fetch('/api/save-names2', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ names: text })
-                });
-
-                if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error || `HTTP error ${response.status}`);
-                }
-
-                const data = await response.json();
-                
-                btn.innerText = `Đã gộp ${data.count} từ!`;
-                btn.style.background = '#059669';
-                btn.style.opacity = '1';
-                
-                alert(`Đã lưu gộp thành công vào file Names2.txt hệ thống! Tổng cộng hiện có ${data.count} mục từ.`);
-
-                setTimeout(() => {
-                    btn.disabled = false;
-                    btn.innerText = originalText;
-                    btn.style.background = '#6366f1';
-                }, 3000);
-
-            } catch (err) {
-                console.error('Lỗi khi lưu Names2:', err);
-                alert(`Lỗi khi lưu Names2: ${err.message}`);
-                btn.disabled = false;
-                btn.innerText = originalText;
-                btn.style.background = '#ef4444';
-                btn.style.opacity = '1';
-            }
-        }
         
         // Hàm lưu cấu hình chương
         function saveBookSettings() {
@@ -1091,6 +906,384 @@ Nhiệm vụ của bạn là:
         } catch(e) {
             console.error('LocalStorage history & last_book registration failed:', e);
         }
+
+        // --- Tích hợp các hàm Quét & dịch Names2 ---
+
+        // Hàm đếm số lần xuất hiện của các từ trùng lặp trong một chuỗi văn bản
+        function countRepeatWords(text = '', minWordLength = 2, maxWordLength = 10, minFrequency = 3, limit = 100) {
+            text = text.trim();
+            const regex = /[\p{P}\n\t\r的了著着]/ug;
+            const wordsArray = text.split(regex).map((item) => item.trim()).filter(Boolean);
+
+            let uniqueWords = new Set();
+            for (let i = 0; i < wordsArray.length; i++) {
+                for (let j = 0; j < wordsArray[i].length; j++) {
+                    for (let k = minWordLength; k <= maxWordLength; k++) {
+                        if (j + k > wordsArray[i].length) continue;
+                        let word = wordsArray[i].slice(j, j + k).trim();
+                        if (word.length >= minWordLength) uniqueWords.add(word);
+                    }
+                }
+            }
+
+            let uniqueWordsArray = Array.from(uniqueWords);
+
+            let result = [];
+            for (let i = 0; i < uniqueWordsArray.length; i++) {
+                let frequency = text.split(uniqueWordsArray[i]).length - 1;
+                if (frequency > minFrequency) {
+                    result.push({ 'word': uniqueWordsArray[i], 'freq': frequency });
+                }
+            }
+
+            result.sort((a, b) => {
+                return b.freq - a.freq || b.word.length - a.word.length;
+            });
+
+            return result.slice(0, limit);
+        }
+
+        function mergeArrays(array1, array2) {
+            const frequencyMap = {};
+            const updateFrequency = (word, freq) => {
+                frequencyMap[word] = (frequencyMap[word] || 0) + freq;
+            };
+            array1.forEach(item => updateFrequency(item.word, item.freq));
+            array2.forEach(item => updateFrequency(item.word, item.freq));
+            return Object.entries(frequencyMap).map(([word, freq]) => ({ word, freq }));
+        }
+
+        async function performNames2Scanning(results) {
+            let combinedRawText = '';
+            results.forEach(res => {
+                if (res) {
+                    combinedRawText += (res.titleRaw || '') + '\n' + (res.contentRaw || '') + '\n';
+                }
+            });
+            
+            const candidates = countRepeatWords(combinedRawText, 2, 8, 3, 100);
+            if (candidates.length === 0) {
+                alert('Không tìm thấy từ lặp nào đủ điều kiện quét.');
+                return;
+            }
+            
+            const wordsList = candidates.map(c => c.word);
+            let dictMap = {};
+            try {
+                const res = await fetch('/api/dict-lookup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ words: wordsList })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    data.results.forEach(item => {
+                        dictMap[item.word] = item;
+                    });
+                }
+            } catch (err) {
+                console.error('Không thể tra cứu nhanh nghĩa từ lặp:', err);
+            }
+            
+            const tbody = document.getElementById('candidatesTableBody');
+            tbody.innerHTML = '';
+            
+            candidates.forEach((cand, idx) => {
+                const dictInfo = dictMap[cand.word] || { hanviet: cand.word, meaning: '' };
+                const row = document.createElement('tr');
+                row.style.borderBottom = '1px solid #f1f5f9';
+                
+                row.innerHTML = `
+                    <td style="padding: 8px 10px; text-align: center;">
+                        <input type="checkbox" class="candidate-check" value="${cand.word}" style="cursor: pointer;" checked>
+                    </td>
+                    <td style="padding: 8px 10px; font-weight: 600; color: #64748b;">${cand.freq}</td>
+                    <td style="padding: 8px 10px; font-weight: 700; color: #0f172a;">${cand.word}</td>
+                    <td style="padding: 8px 10px; color: #2563eb;">${dictInfo.hanviet}</td>
+                    <td style="padding: 8px 10px; color: #475569; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${dictInfo.meaning || ''}">${dictInfo.meaning || '<chưa dịch>'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('names2Workspace').style.display = 'flex';
+            document.getElementById('selectAllCandidates').checked = true;
+        }
+
+        function toggleSelectAllCandidates(masterCheckbox) {
+            const checks = document.querySelectorAll('.candidate-check');
+            checks.forEach(cb => cb.checked = masterCheckbox.checked);
+        }
+
+        async function translateSelectedNamesWithAi(translateAll = false) {
+            const checkedBoxes = document.querySelectorAll('.candidate-check:checked');
+            if (checkedBoxes.length === 0) {
+                alert('Vui lòng chọn ít nhất một từ để dịch bằng AI!');
+                return;
+            }
+            
+            const words = Array.from(checkedBoxes).map(cb => cb.value);
+            
+            const apiType = document.getElementById('aiApiType').value;
+            const apiKey = document.getElementById('cometApiKey').value.trim();
+            const model = document.getElementById('cometModel').value.trim();
+            const endpointUrl = document.getElementById('cometEndpoint').value.trim();
+            const customSystemPrompt = document.getElementById('customSystemPrompt').value;
+            const customSystemPromptAll = document.getElementById('customSystemPromptAll').value;
+            
+            if (!apiKey) {
+                alert('Vui lòng click nút "⚙️ Cấu hình AI" và nhập API Key trước khi sử dụng tính năng này!');
+                return;
+            }
+
+            // Lưu cấu hình hiện tại vào localStorage
+            localStorage.setItem('ai_api_type', apiType);
+            localStorage.setItem('comet_api_key', apiKey);
+            localStorage.setItem('comet_model', model);
+            localStorage.setItem('comet_endpoint', endpointUrl);
+            localStorage.setItem('custom_system_prompt', customSystemPrompt);
+            localStorage.setItem('custom_system_prompt_all', customSystemPromptAll);
+            
+            const statusSpan = document.getElementById('aiTranslateStatus');
+            const aiBtn = document.getElementById('aiTranslateSelectedBtn');
+            const aiAllBtn = document.getElementById('aiTranslateAllSelectedBtn');
+            
+            statusSpan.innerText = 'Đang gửi yêu cầu dịch AI...';
+            aiBtn.disabled = true;
+            aiBtn.style.opacity = '0.5';
+            if (aiAllBtn) {
+                aiAllBtn.disabled = true;
+                aiAllBtn.style.opacity = '0.5';
+            }
+            
+            let contextExcerpt = '';
+            if (window.downloadedRawChapters) {
+                const firstChap = window.downloadedRawChapters.find(c => c && c.contentRaw);
+                if (firstChap) {
+                    contextExcerpt = (firstChap.titleRaw || '') + '\n' + (firstChap.contentRaw || '').slice(0, 1500);
+                }
+            }
+            
+            try {
+                const res = await fetch('/api/translate-selected-names-ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        words,
+                        apiType,
+                        apiKey,
+                        model,
+                        endpointUrl,
+                        customSystemPrompt: translateAll ? customSystemPromptAll : customSystemPrompt,
+                        contextExcerpt,
+                        translateAll
+                    })
+                });
+                
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.error || `HTTP error ${res.status}`);
+                }
+                
+                const data = await res.json();
+                const outputArea = document.getElementById('names2OutputEdit');
+                
+                let currentVal = outputArea.value.trim();
+                if (currentVal && !currentVal.endsWith('\n')) {
+                    currentVal += '\n';
+                }
+                outputArea.value = currentVal + (data.names || '');
+                statusSpan.innerText = 'Dịch AI hoàn tất!';
+            } catch (err) {
+                console.error(err);
+                alert('Lỗi dịch AI: ' + err.message);
+                statusSpan.innerText = 'Lỗi dịch AI.';
+            } finally {
+                aiBtn.disabled = false;
+                aiBtn.style.opacity = '1';
+                if (aiAllBtn) {
+                    aiAllBtn.disabled = false;
+                    aiAllBtn.style.opacity = '1';
+                }
+            }
+        }
+
+        async function compileAndDownloadTxt(saveToSystem) {
+            const rawChapters = window.downloadedRawChapters;
+            if (!rawChapters || rawChapters.length === 0) {
+                alert('Không có dữ liệu chương để dịch!');
+                return;
+            }
+            
+            const namesVal = document.getElementById('names2OutputEdit').value.trim();
+            const names2Obj = {};
+            if (namesVal) {
+                namesVal.split('\n').forEach(line => {
+                    const eqIdx = line.indexOf('=');
+                    if (eqIdx <= 0) return;
+                    const key = line.slice(0, eqIdx).trim();
+                    const val = line.slice(eqIdx + 1).trim();
+                    if (key && val) {
+                        names2Obj[key] = val;
+                    }
+                });
+            }
+            
+            const rangeBtn = document.getElementById('downloadRangeBtn');
+            const fullBtn = document.getElementById('downloadFullBtn');
+            const statusText = document.getElementById('downloadStatusText');
+            const progressBar = document.getElementById('downloadProgressBar');
+            const percentText = document.getElementById('downloadPercentText');
+            
+            rangeBtn.disabled = true;
+            fullBtn.disabled = true;
+            rangeBtn.style.opacity = '0.5';
+            fullBtn.style.opacity = '0.5';
+            
+            if (saveToSystem && namesVal) {
+                statusText.innerText = 'Đang lưu Names2 vào hệ thống...';
+                try {
+                    const res = await fetch('/api/save-names2', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ names: namesVal })
+                    });
+                    if (!res.ok) {
+                        alert('Lưu Names2 hệ thống không thành công, tiếp tục dịch và tải...');
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+            
+            statusText.innerText = 'Bắt đầu dịch bằng Names2 mới...';
+            progressBar.style.width = '0%';
+            percentText.innerText = '0%';
+            
+            const total = rawChapters.length;
+            const translatedResults = [];
+            
+            for (let i = 0; i < total; i++) {
+                const chap = rawChapters[i];
+                if (!chap) continue;
+                
+                statusText.innerText = `Đang dịch chương ${i + 1}/${total}...`;
+                const percent = Math.floor((i / total) * 100);
+                progressBar.style.width = `${percent}%`;
+                percentText.innerText = `${percent}%`;
+                
+                const textToTranslate = (chap.titleRaw || '') + '\n' + (chap.contentRaw || '');
+                try {
+                    const res = await fetch('/translate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: textToTranslate, names2: names2Obj })
+                    });
+                    if (!res.ok) throw new Error(`Lỗi HTTP ${res.status}`);
+                    const data = await res.json();
+                    
+                    const lines = (data.translatedText || '').split('\n');
+                    const title = lines[0] ? lines[0].trim() : (chap.titleRaw || `Chương ${chap.num}`);
+                    const content = lines.slice(1).map(p => p.trim()).filter(p => p.length > 0).join('\n\n');
+                    
+                    translatedResults.push({
+                        num: chap.num,
+                        title,
+                        content
+                    });
+                } catch (err) {
+                    console.error('Lỗi dịch chương:', err);
+                    translatedResults.push({
+                        num: chap.num,
+                        title: chap.title,
+                        content: chap.content
+                    });
+                }
+            }
+            
+            progressBar.style.width = '100%';
+            percentText.innerText = '100%';
+            statusText.innerText = 'Đang ghép file và chuẩn bị tải...';
+            
+            // Ghép nội dung file
+            const bookTitle = document.querySelector('.book-title').innerText.trim();
+            const bookAuthor = document.querySelector('.book-author').innerText.trim();
+            const bookIntro = document.querySelector('.intro-text').innerText.trim();
+            
+            let fileContent = `${bookTitle}\n${bookAuthor}\nGiới thiệu:\n${bookIntro}\n\n=========================================\n\n`;
+            
+            translatedResults.forEach(res => {
+                if (res) {
+                    fileContent += `\n\n${res.title}\n\n${res.content}\n`;
+                }
+            });
+
+            const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+            const downloadUrl = URL.createObjectURL(blob);
+            const sanitizedTitle = bookTitle.replace(/[\\/:*?"<>|\r\n\t]/g, '').trim();
+            
+            const startNum = window.currentBookStartNum;
+            const endNum = window.currentBookEndNum;
+            const isFull = window.currentBookIsFull;
+            
+            let fileName = `${sanitizedTitle}_Chuong_${startNum}_den_${endNum}.txt`;
+            if (isFull) {
+                fileName = `${sanitizedTitle}_Full.txt`;
+            }
+
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(downloadUrl);
+            }, 1500);
+
+            statusText.innerText = `Hoàn tất! Đã tải xuống file truyện.`;
+            
+            rangeBtn.disabled = false;
+            fullBtn.disabled = false;
+            rangeBtn.style.opacity = '1';
+            fullBtn.style.opacity = '1';
+            document.getElementById('names2Workspace').style.display = 'none';
+        }
+
+        // Tự động tải cấu hình từ localStorage ngay khi trang được nạp
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedApiType = localStorage.getItem('ai_api_type') || 'openai';
+            document.getElementById('aiApiType').value = savedApiType;
+            document.getElementById('cometApiKey').value = localStorage.getItem('comet_api_key') || '';
+            document.getElementById('cometModel').value = localStorage.getItem('comet_model') || 'gemini-2.5-flash-lite';
+            document.getElementById('cometEndpoint').value = localStorage.getItem('comet_endpoint') || 'https://api.cometapi.com/v1/chat/completions';
+            
+            const savedPrompt = localStorage.getItem('custom_system_prompt');
+            if (savedPrompt !== null) {
+                document.getElementById('customSystemPrompt').value = savedPrompt;
+            } else {
+                document.getElementById('customSystemPrompt').value = `Bạn là một chuyên gia phân tích ngôn ngữ Trung - Việt chuyên dịch tên riêng cho truyện.
+Nhiệm vụ của bạn là:
+1. Nhận danh sách các từ tiếng Trung được yêu cầu.
+2. Dựa trên bối cảnh truyện được cung cấp, dịch các từ tiếng Trung đó sang tên riêng tiếng Việt phù hợp (ví dụ: Tên nhân vật, Tên địa danh/tông môn, Tên chiêu thức, Tên vũ khí/vật phẩm).
+3. CHỈ trả về kết quả theo định dạng 'Từ_tiếng_Trung=Nghĩa_Dịch' (ví dụ: '云飞=Vân Phi'), mỗi dòng một tên.
+4. KHÔNG giải thích, KHÔNG thêm tiêu đề, KHÔNG thêm số thứ tự hay bất kỳ ký tự thừa nào khác.`;
+            }
+
+            const savedPromptAll = localStorage.getItem('custom_system_prompt_all');
+            if (savedPromptAll !== null) {
+                document.getElementById('customSystemPromptAll').value = savedPromptAll;
+            } else {
+                document.getElementById('customSystemPromptAll').value = `Bạn là một chuyên gia phân tích ngôn ngữ Trung - Việt chuyên dịch thuật cho truyện chữ Trung Quốc.
+Nhiệm vụ của bạn là:
+1. Nhận danh sách các từ tiếng Trung được yêu cầu.
+2. Dựa trên bối cảnh truyện được cung cấp, dịch TẤT CẢ các từ tiếng Trung này sang nghĩa tiếng Việt phù hợp nhất (ưu tiên nghĩa Hán Việt hoặc nghĩa thuần Việt tự nhiên tùy thuộc vào ngữ cảnh).
+3. Bạn phải dịch và trả về bản dịch cho TOÀN BỘ danh sách từ được yêu cầu, không được bỏ sót bất kỳ từ nào.
+4. CHỈ trả về kết quả theo định dạng 'Từ_tiếng_Trung=Nghĩa_Dịch' (ví dụ: '云飞=Vân Phi'), mỗi dòng một từ.
+5. KHÔNG giải thích, KHÔNG thêm tiêu đề, KHÔNG thêm số thứ tự hay bất kỳ ký tự thừa nào khác.`;
+            }
+            onApiTypeChange();
+        });
     </script>
 </body>
 </html>
