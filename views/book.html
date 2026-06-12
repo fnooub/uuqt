@@ -399,6 +399,9 @@
                     </div>
                     
                     <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 5px;">
+                        <button onclick="saveNames2Only()" id="saveNames2OnlyBtn" class="download-btn" style="padding: 8px 16px; font-size: 0.85rem; background: #8b5cf6; border: none; cursor: pointer;">
+                            Lưu Names2 Hệ thống
+                        </button>
                         <button onclick="compileAndDownloadTxt(false)" id="compileDirectBtn" class="download-btn" style="padding: 8px 16px; font-size: 0.85rem; background: #10b981; border: none; cursor: pointer;">
                             Dịch & Tải File TXT
                         </button>
@@ -1107,6 +1110,45 @@ Nhiệm vụ của bạn là:
             }
         }
 
+        async function saveNames2Only() {
+            const namesVal = document.getElementById('names2OutputEdit').value.trim();
+            if (!namesVal) {
+                alert('Không có nội dung Names2 để lưu!');
+                return;
+            }
+            
+            const statusText = document.getElementById('downloadStatusText');
+            const saveBtn = document.getElementById('saveNames2OnlyBtn');
+            const statusContainer = document.getElementById('downloadProgressContainer');
+            
+            saveBtn.disabled = true;
+            saveBtn.style.opacity = '0.5';
+            statusContainer.style.display = 'flex';
+            statusText.innerText = 'Đang lưu Names2 vào hệ thống...';
+            
+            try {
+                const res = await fetch('/api/save-names2', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ names: namesVal })
+                });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || 'Lỗi server');
+                }
+                const data = await res.json();
+                statusText.innerText = `Lưu Names2 hệ thống thành công! (Tổng số: ${data.count || 0} mục)`;
+                alert('Đã lưu Names2 vào hệ thống thành công và áp dụng cho các lượt dịch tiếp theo!');
+            } catch (err) {
+                console.error(err);
+                statusText.innerText = 'Lưu Names2 thất bại.';
+                alert('Lưu Names2 thất bại: ' + err.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.style.opacity = '1';
+            }
+        }
+
         async function compileAndDownloadTxt(saveToSystem) {
             const rawChapters = window.downloadedRawChapters;
             if (!rawChapters || rawChapters.length === 0) {
@@ -1148,10 +1190,24 @@ Nhiệm vụ của bạn là:
                         body: JSON.stringify({ names: namesVal })
                     });
                     if (!res.ok) {
-                        alert('Lưu Names2 hệ thống không thành công, tiếp tục dịch và tải...');
+                        const data = await res.json().catch(() => ({}));
+                        alert('Lưu Names2 hệ thống thất bại: ' + (data.error || 'Lỗi server') + '. Dừng dịch và tải file.');
+                        // Khôi phục giao diện các nút bấm
+                        rangeBtn.disabled = false;
+                        fullBtn.disabled = false;
+                        rangeBtn.style.opacity = '1';
+                        fullBtn.style.opacity = '1';
+                        return; // Dừng lại ở đây!
                     }
                 } catch (err) {
                     console.error(err);
+                    alert('Lỗi kết nối khi lưu Names2: ' + err.message + '. Dừng dịch và tải file.');
+                    // Khôi phục giao diện các nút bấm
+                    rangeBtn.disabled = false;
+                    fullBtn.disabled = false;
+                    rangeBtn.style.opacity = '1';
+                    fullBtn.style.opacity = '1';
+                    return; // Dừng lại ở đây!
                 }
             }
             
